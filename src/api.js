@@ -38,7 +38,9 @@ export async function searchGovInfo(opts) {
     query: buildQuery(opts),
     pageSize: String(opts.pageSize ?? 20),
     offsetMark: opts.offsetMark || '*',
-    sorts: [{ field: opts.sortField || 'score', sortOrder: 'DESC' }],
+    // Default to chronological — most recent first. Score-relevance sort
+    // available via opts.sortField='score' (a UI toggle is on the list).
+    sorts: [{ field: opts.sortField || 'dateIssued', sortOrder: 'DESC' }],
   };
   const r = await fetch(viaProxy(`${GOVINFO}/search`), {
     method: 'POST',
