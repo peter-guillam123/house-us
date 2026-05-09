@@ -3,8 +3,8 @@
 // Title-only results for now; snippet extraction (lazy granule fetch)
 // is the next commit.
 
-import { searchGovInfo } from './api.js?v=1';
-import { renderResultRow } from './format.js?v=1';
+import { searchGovInfo, fetchGranuleText } from './api.js?v=2';
+import { renderResultRow, snippetHtml } from './format.js?v=2';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('search-form');
@@ -126,6 +126,9 @@ async function runSearch({ append = false } = {}) {
     state.total = res.total;
     state.offsetMark = res.nextOffset || '*';
     appendRows(res.items);
+    // Kick off snippet fetches for the new batch (don't await — let the
+    // status line and load-more update immediately; snippets fade in).
+    fillSnippets(res.items, state.term);
     const moreAvailable = state.items.length < state.total;
     $loadMore.hidden = !moreAvailable;
     $loadMore.disabled = false;
@@ -144,6 +147,39 @@ function appendRows(items) {
   const frag = document.createDocumentFragment();
   for (const item of items) frag.appendChild(renderResultRow(item));
   $results.appendChild(frag);
+}
+
+// Fetch granule text for each visible CREC result and inject a snippet
+// around the search term. Bounded concurrency 4 — high enough to feel
+// quick on a typical 20-row page, low enough to stay polite to the
+// proxy and friendly to mobile memory. Failures are silent: a row that
+// can't load a snippet just stays title-only.
+async function fillSnippets(items, term) {
+  let i = 0;
+  const worker = async () => {
+    while (i < items.length) {
+      const item = items[i++];
+      if (item.collection !== 'CREC') continue; // other collections later
+      const row = $results.querySelector(`li[data-id="${cssEscapeAttr(item.id)}"] .result-snippet`);
+      if (!row) continue;
+      try {
+        const text = await fetchGranuleText(item.packageId, item.granuleId);
+        if (!text) { row.dataset.snippet = 'empty'; continue; }
+        row.innerHTML = snippetHtml(text, term);
+        row.dataset.snippet = 'loaded';
+      } catch {
+        row.dataset.snippet = 'failed';
+      }
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+}
+
+// CSS attribute selectors don't tolerate quotes / brackets in the value.
+// CREC granule IDs only contain ASCII alphanumerics and hyphens, but
+// belt-and-braces: escape the few characters that could trip the parser.
+function cssEscapeAttr(s) {
+  return String(s).replace(/["\\]/g, '\\$&');
 }
 
 function setStatus(msg, isError = false) {

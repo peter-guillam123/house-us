@@ -917,6 +917,9 @@ main {
   padding: 0 0.15em;
   font-weight: 500;
 }
+/* Empty snippet (still fetching, or no body text available) takes no
+   vertical space — keeps the row tight while the granule loads. */
+.result-snippet:empty { margin: 0; }
 
 /* staggered reveal */
 @keyframes fadeUp {

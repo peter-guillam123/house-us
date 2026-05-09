@@ -124,6 +124,35 @@
 
       <div class="entry milestone">
         <p class="when">May 2026</p>
+        <h3>Snippets &mdash; Search becomes triage-able</h3>
+        <p>
+          The thing that made title-only Search frustrating was CREC&rsquo;s
+          recurrent generic titles &mdash; &ldquo;Climate Change&rdquo; over
+          and over, no way to tell which speech is which without clicking
+          through. Snippets fix it. After the search returns, each visible
+          row kicks off a granule HTML fetch through the Worker (bounded
+          concurrency 4, edge-cached for 5 minutes), strips to text, and
+          pulls a ~260-character window centred on the matched term with
+          a gold-underline highlight. Title-only results stay readable
+          while snippets fade in over the first second or so; rows that
+          fail to fetch a snippet just stay title-only.
+        </p>
+        <p>
+          Smaller-but-related polish from a review pass: default sort is
+          now most-recent-first rather than relevance-by-score (the
+          jumbled date order was harder to scan); the favicon&rsquo;s
+          Old Glory Red is back as the literal full-stop next to the
+          navy accent dot, so the heading reads as a small flag flourish
+          rather than a typo; CREC&rsquo;s shouty all-caps titles get
+          de-shouted but acronyms (CIA, FBI, EPA, POTUS et al.) stay
+          uppercase via a small whitelist; and parenthetical contexts
+          like &ldquo;(Executive Session)&rdquo; ghost in muted ink so
+          the title proper carries the weight.
+        </p>
+      </div>
+
+      <div class="entry milestone">
+        <p class="when">May 2026</p>
         <h3>Search v0 &mdash; first real queries land</h3>
         <p>
           Search now talks to GovInfo through the Worker and renders ranked

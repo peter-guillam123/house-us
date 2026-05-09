@@ -126,3 +126,27 @@ function deShout(s) {
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
+
+// Fetch the plain-text body of a single CREC granule. GovInfo wraps the
+// speech in <html><body><pre>...</pre></body></html>; we extract the <pre>
+// content, strip residual tags and decode entities. The proxy edge-caches
+// these for 5 minutes, so re-running the same search is fast.
+export async function fetchGranuleText(packageId, granuleId) {
+  if (!packageId || !granuleId) return '';
+  const url = `${GOVINFO}/packages/${packageId}/granules/${granuleId}/htm`;
+  const r = await fetch(viaProxy(url));
+  if (!r.ok) throw new Error(`Granule fetch failed: ${r.status}`);
+  const html = await r.text();
+  const m = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);
+  const inner = m ? m[1] : html;
+  return inner
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
