@@ -23,7 +23,7 @@ import sys
 import time
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 BASE_URL = "https://lda.senate.gov/api/v1"
 USER_AGENT = "house-us-lda-harvester/1.0 (chris.moran@guardian.co.uk)"
@@ -39,19 +39,31 @@ SLEEP_AUTH = 0.5
 PAGE_SIZE = 25
 
 
-def get_json(url, headers, retries=3):
+def get_json(url, headers, retries=6):
+    """GET with backoff retries on 429, transient HTTP errors and connection
+    blips. An 80-minute unattended run will hit at least one of each — be
+    patient rather than fail the whole quarter near the end."""
     for attempt in range(retries):
         req = Request(url, headers=headers)
         try:
-            with urlopen(req, timeout=30) as r:
+            with urlopen(req, timeout=60) as r:
                 return json.loads(r.read().decode("utf-8"))
         except HTTPError as e:
-            if e.code == 429 and attempt < retries - 1:
-                wait = 10 * (attempt + 1)
-                print(f"  429, sleeping {wait}s...", file=sys.stderr)
-                time.sleep(wait)
-                continue
-            raise
+            last_attempt = attempt == retries - 1
+            if last_attempt:
+                raise
+            wait = 10 * (attempt + 1) if e.code == 429 else 5 * (attempt + 1)
+            print(f"  HTTP {e.code}, retry {attempt+1}/{retries} in {wait}s",
+                  file=sys.stderr)
+            time.sleep(wait)
+        except (URLError, TimeoutError, OSError) as e:
+            last_attempt = attempt == retries - 1
+            if last_attempt:
+                raise
+            wait = 5 * (attempt + 1)
+            print(f"  {type(e).__name__}: {e} — retry {attempt+1}/{retries} "
+                  f"in {wait}s", file=sys.stderr)
+            time.sleep(wait)
     raise RuntimeError(f"too many retries on {url}")
 
 
