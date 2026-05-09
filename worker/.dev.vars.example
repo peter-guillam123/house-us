@@ -1,5 +1,7 @@
-# Copy to worker/.dev.vars and fill in your key.
-# Register at https://api.data.gov/signup/ — takes 30 seconds.
+# Copy to worker/.dev.vars and replace DEMO_KEY with your real key.
+# DEMO_KEY is rate-limited to 30 requests/hour per IP — fine for a
+# first-poke smoke test, useless for real development. Register at
+# https://api.data.gov/signup/ — takes 30 seconds, gets you 1,000/hr.
 # .dev.vars is gitignored. For production, use:
 #   cd worker && npx wrangler secret put API_DATA_GOV_KEY
 API_DATA_GOV_KEY=DEMO_KEY

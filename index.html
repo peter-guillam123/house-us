@@ -51,7 +51,7 @@
     <section class="hero">
       <h1 class="lede">Search what&rsquo;s been said in Congress.</h1>
       <p class="sub">The Congressional Record, bills, votes and Lobbying Disclosure filings &mdash; House and Senate, in one ranked list. Sister surface to <a href="https://peter-guillam123.github.io/House/">House (UK)</a> and <a href="https://peter-guillam123.github.io/house-au/">House (AU)</a>.</p>
-      <p class="index-stamp" id="index-stamp" aria-live="polite">Scaffold mode &mdash; search wiring lands next. The plan&rsquo;s on the <a href="about.html">About page</a>.</p>
+      <p class="index-stamp" id="index-stamp" aria-live="polite"></p>
     </section>
 
     <form id="search-form" class="search" autocomplete="off">
@@ -63,7 +63,7 @@
       </span>
       <label class="search-field">
         <span class="visually-hidden">Search term</span>
-        <input id="q" type="search" name="q" placeholder="Search a term, bill, or representative&hellip;" autocomplete="off">
+        <input id="q" type="search" name="q" placeholder="Search a term, bill, or representative&hellip;" autocomplete="off" autofocus>
       </label>
       <button type="submit" class="primary">
         <span class="primary-label">Search</span>
@@ -71,31 +71,64 @@
       </button>
     </form>
 
+    <details class="filters-shell" id="filters-shell" open>
+      <summary class="filters-toggle">
+        <span class="ft-label">Filters</span>
+        <span class="ft-summary" id="ft-summary" aria-live="polite"></span>
+        <span class="ft-chev" aria-hidden="true">
+          <svg viewBox="0 0 12 8" width="12" height="8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1.5 6 6.5 11 1.5"/></svg>
+        </span>
+      </summary>
+
+      <section class="filters" aria-label="Filters">
+        <fieldset class="filter">
+          <legend>Date range</legend>
+          <div class="pills" role="radiogroup" id="date-presets">
+            <button type="button" role="radio" aria-checked="false" data-preset="month">Last month</button>
+            <button type="button" role="radio" aria-checked="true"  data-preset="year">Last year</button>
+            <button type="button" role="radio" aria-checked="false" data-preset="five">Last 5 years</button>
+            <button type="button" role="radio" aria-checked="false" data-preset="custom">Custom</button>
+          </div>
+          <div class="custom-dates" id="custom-dates" hidden>
+            <label>From <input type="date" id="from-date"></label>
+            <label>To <input type="date" id="to-date"></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="filter">
+          <legend>Collections</legend>
+          <div class="pills" id="collections">
+            <button type="button" data-collection="CREC"  aria-pressed="true">Cong. Record</button>
+            <button type="button" data-collection="BILLS" aria-pressed="false">Bills</button>
+            <button type="button" data-collection="CHRG"  aria-pressed="false">Hearings</button>
+            <button type="button" data-collection="FR"    aria-pressed="false">Fed. Register</button>
+            <button type="button" data-collection="CRPT"  aria-pressed="false">Cmte reports</button>
+          </div>
+        </fieldset>
+      </section>
+    </details>
+
     <div class="results-toolbar">
       <div id="status" class="status" aria-live="polite"></div>
+    </div>
+    <ol id="results" class="results"></ol>
+    <div class="more">
+      <button type="button" id="load-more" hidden>Load more</button>
     </div>
   </main>
 
   <footer>
     <div class="footer-inner">
       <p class="colophon">
-        Will draw from <a href="https://api.congress.gov/">Congress.gov</a>,
-        <a href="https://api.govinfo.gov/">GovInfo</a>,
-        <a href="https://www.federalregister.gov/developers/documentation/api/v1">Federal Register</a> and
-        <a href="https://lda.gov/">Lobbying Disclosure</a>. US federal works are public domain.
-        Internal newsroom tool &mdash; scaffold mode.
+        Drawn from <a href="https://api.govinfo.gov/">GovInfo</a> via a small
+        <a href="https://github.com/peter-guillam123/house-us/tree/main/worker">Cloudflare Worker</a>
+        that proxies the CORS-blocked endpoints. US federal works are public domain.
+        Internal newsroom tool.
       </p>
       <p class="colophon-meta"><a href="about.html">About</a></p>
     </div>
   </footer>
 
-  <script>
-    // Inert v0: prevent default submit and show a scaffold status.
-    document.getElementById('search-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var status = document.getElementById('status');
-      status.textContent = 'Search wiring lands next — see About for the plan.';
-    });
-  </script>
+  <script type="module" src="src/app.js?v=1"></script>
 </body>
 </html>

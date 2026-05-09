@@ -124,6 +124,49 @@
 
       <div class="entry milestone">
         <p class="when">May 2026</p>
+        <h3>Search v0 &mdash; first real queries land</h3>
+        <p>
+          Search now talks to GovInfo through the Worker and renders ranked
+          results: title, date, collection tag, click-through to the full
+          document on govinfo.gov. Default collection is the Congressional
+          Record (CREC); Bills, Hearings, the Federal Register and Committee
+          Reports are pill toggles you can layer on. Date-range filter runs
+          last month / last year (default) / last 5 years / custom. The
+          search state lives in the URL, so a result page is shareable and
+          the back button works.
+        </p>
+        <p>
+          One honest gap to flag: GovInfo&rsquo;s search returns titles
+          only, not the surrounding sentence. CREC titles are also shouty
+          all-caps (&ldquo;CLIMATE CHANGE&rdquo;) so there&rsquo;s a small
+          de-shouting pass on the way in. Snippets-around-the-match comes
+          next, via lazy-fetching the granule HTML for visible results
+          with bounded concurrency. Until then, click-through is one
+          tap away.
+        </p>
+      </div>
+
+      <div class="entry">
+        <p class="when">May 2026</p>
+        <h3>Cloudflare Worker &mdash; load-bearing, not optional</h3>
+        <p>
+          Started this commit thinking the Worker was overkill for v0 and
+          we could call the APIs direct from the browser. Pushed back on my
+          own plan, got told to skip it, then verified actual CORS headers
+          and discovered <code>api.govinfo.gov</code> sends none. Without a
+          proxy, full-text search of the Congressional Record from a static
+          page is impossible. So the Worker is back &mdash; same shape as
+          House UK&rsquo;s, ~50 lines, with three differences for US: it
+          handles POST (GovInfo Search is POST), it injects the
+          api.data.gov key server-side, and the allow-list is the four US
+          hosts we&rsquo;ll touch. Edge-caches GET responses for five
+          minutes. Lesson: verify CORS before deciding the architecture,
+          not after.
+        </p>
+      </div>
+
+      <div class="entry milestone">
+        <p class="when">May 2026</p>
         <h3>Day one &mdash; static shell, brand swap, scaffold notice</h3>
         <p>
           Lifted the static shell, type stack, palette and component vocabulary

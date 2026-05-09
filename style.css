@@ -829,6 +829,14 @@ main {
 .src-ws      { color: var(--src-ws); }
 .src-cmte    { color: var(--src-cmte); }
 
+/* US GovInfo collection mappings — reuse the same palette as the AU
+   source classes so the visual rhythm carries across regions. */
+.src-crec    { color: var(--src-spoken); }
+.src-bills   { color: var(--src-written); }
+.src-chrg    { color: var(--src-cmte); }
+.src-fr      { color: var(--src-wq); }
+.src-crpt    { color: var(--src-ws); }
+
 /* Small mono-caps section tag above the title — soaks up the AU
    "COMMITTEES - X" / "BUSINESS - Y" prefixes so the heading proper
    reads as a heading proper. Reused by Deep Dive headlines. */
