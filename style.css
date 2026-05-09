@@ -29,6 +29,7 @@
   --accent:       #1d2f5e;   /* Federal navy — restrained */
   --accent-deep:  #14234a;
   --accent-tint:  #e6eaf2;   /* very faint wash */
+  --accent-red:   #bf0a30;   /* Old Glory Red — from the favicon */
   --highlight:    #ffcd00;   /* Pantone 116C — match-highlight fill only */
 
   /* source colours kept editorial-quiet, single-channel */
@@ -234,6 +235,10 @@ main {
   content: '.';
   color: var(--accent);
 }
+/* The literal full stop sitting beside the accent dot — picked up
+   in red from the favicon. The pair reads as a small flag flourish:
+   red dot, then navy dot. Used together, deliberately. */
+.hero .hero-stop { color: var(--accent-red); }
 .hero .sub {
   margin: 0.9rem 0 0;
   font-family: var(--sans);
@@ -887,6 +892,13 @@ main {
 .result-title a:hover {
   background-size: 100% 1px;
   color: var(--accent);
+}
+/* Ghost the parenthetical context on titles ("(Executive Session)",
+   "(Continued)") so the actual title carries the weight. Quieter ink
+   colour, normal weight; same font-size to keep the line rhythm. */
+.result-title .title-context {
+  color: var(--ink-faint);
+  font-weight: 400;
 }
 
 .result-snippet {
