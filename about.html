@@ -30,6 +30,7 @@
       </a>
       <nav class="topnav">
         <a href="./">Search</a>
+        <a href="lobbying.html">Lobbying</a>
         <a href="about.html" aria-current="page">About</a>
       </nav>
     </div>
@@ -121,6 +122,49 @@
 
     <section class="changelog">
       <h2>Diary</h2>
+
+      <div class="entry milestone">
+        <p class="when">May 2026</p>
+        <h3>Lobbying lands &mdash; the killer surface, sample-shard first</h3>
+        <p>
+          The promised killer surface ships. Quarterly LD-2 filings live
+          on a separate <a href="lobbying.html">Lobbying tab</a> with full-text
+          search of the registrant, client, lobbyist names and (the gold
+          seam) the free-text issue-description field that lobbyists use
+          to describe what they actually lobbied on. Filter by Senate
+          issue code (BUD, DEF, HCR, TRA, TAX et al., dropdown populated
+          from whatever&rsquo;s in the loaded shard).
+        </p>
+        <p>
+          Pipeline shape: pure-stdlib Python harvester pulls from the
+          Senate&rsquo;s <a href="https://lda.senate.gov/api/">public LDA
+          API</a>, strips each filing to the editorially-useful subset
+          (~600 bytes per filing), writes a gzipped JSON shard per
+          quarter to the repo. Browser fetches the shard, decompresses
+          via the native <code>DecompressionStream</code>, searches
+          client-side. Same plumbing pattern as House AU&rsquo;s Hansard
+          shards, just over a much smaller dataset.
+        </p>
+        <p>
+          One honest caveat: today&rsquo;s shipped shard is the first
+          1,500 filings of Q1 2026 &mdash; about 7% of the quarter &mdash;
+          because the API caps page size at 25 silently and the anonymous
+          15-req/min rate limit makes a full quarter an ~80-minute pull.
+          Enough to verify every UI path against real data; the full
+          backfill is a one-line script run when there&rsquo;s a longer
+          window or a registered API token, written for next session.
+        </p>
+        <p>
+          The <code>lda.gov</code> successor host is the bigger watch-out.
+          Right now its Akamai front door is mis-configured and serves
+          403 to every scripted client. The harvester points at
+          <code>lda.senate.gov</code> (which works fine) and the legacy
+          host sunsets 30 June 2026. If <code>lda.gov</code> isn&rsquo;t
+          fixed by then, a one-line <code>BASE_URL</code> swap won&rsquo;t
+          be enough and the project breaks the morning of the sunset.
+          Calendar reminder set.
+        </p>
+      </div>
 
       <div class="entry milestone">
         <p class="when">May 2026</p>
