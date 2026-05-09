@@ -921,6 +921,38 @@ main {
    vertical space — keeps the row tight while the granule loads. */
 .result-snippet:empty { margin: 0; }
 
+/* Filter <select> styling. The Lobbying tab uses dropdowns for
+   quarter and issue area; the lifted CSS handled pill buttons but
+   not native selects, so they were rendering in system chrome. Match
+   the editorial-archive aesthetic: paper background, rule border,
+   inline mono chevron, accent on focus. */
+.filter select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--paper-warm);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%2314110d' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M1 1.5 6 6.5 11 1.5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  font-family: var(--sans);
+  font-size: 0.9rem;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 150ms, box-shadow 150ms;
+  min-width: 14ch;
+}
+.filter select:hover {
+  border-color: var(--ink-faint);
+}
+.filter select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
 /* ================================================================
    Lobbying (LD-2) results — registrant -> client headline, with one
    or more activity blocks underneath. The headline is the relationship,

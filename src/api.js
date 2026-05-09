@@ -3,6 +3,10 @@
 // browser calls to GovInfo don't work — it sends no CORS headers.
 // House UK uses the same `?u=<encoded_url>` shape; mirroring it here.
 
+// deShout lives in format.js so the Lobbying tab can use the same
+// heuristic on LDA registrant/client names.
+import { deShout } from './format.js?v=3';
+
 const PROXY = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
   ? 'http://localhost:8787'
   // Update this string after `wrangler deploy` if your account subdomain
@@ -84,43 +88,6 @@ function publicLink(collection, pkg, gr) {
     return `https://www.govinfo.gov/content/pkg/${pkg}/html/${gr}.htm`;
   }
   return `https://www.govinfo.gov/app/details/${pkg}`;
-}
-
-// CREC titles arrive shouty — "CLIMATE CHANGE", "TRIBUTE TO MAJ. JOHN SMITH".
-// De-shout to title case, keeping common short words lowercase and known
-// acronyms uppercase. The acronym list isn't exhaustive — grow it as new
-// ones surface. The cost of adding an entry is one line.
-const STOPWORDS = new Set([
-  'of', 'to', 'in', 'on', 'at', 'for', 'and', 'or', 'a', 'an', 'the',
-  'as', 'by', 'with', 'into', 'from', 'vs',
-]);
-const ACRONYMS = new Set([
-  // Departments and major agencies
-  'CIA', 'FBI', 'NSA', 'DHS', 'DOJ', 'DOD', 'DOT', 'DOI', 'HHS', 'HUD',
-  'EPA', 'FDA', 'FCC', 'FAA', 'CDC', 'NIH', 'NIST', 'NASA', 'USPS',
-  'USDA', 'IRS', 'SEC', 'TSA', 'ICE', 'DEA', 'ATF', 'BLM', 'BIA', 'VA',
-  // Country / international
-  'USA', 'US', 'UN', 'NATO', 'EU', 'UK', 'NAFTA', 'WTO', 'WHO', 'IMF',
-  // Politics / law
-  'POTUS', 'VP', 'GOP', 'PAC', 'SCOTUS', 'NDAA',
-  // Other recurrent
-  'AI', 'COVID', 'LGBTQ', 'PFAS', 'CO2', 'GDP', 'GDPR', 'NRA', 'AARP',
-]);
-function deShout(s) {
-  if (!s) return s;
-  const letters = s.replace(/[^A-Za-z]/g, '');
-  if (!letters.length) return s;
-  const upperRatio = letters.replace(/[^A-Z]/g, '').length / letters.length;
-  if (upperRatio < 0.8) return s; // already mixed-case
-  let first = true;
-  return s.replace(/\b(\w+)\b/g, (_, w) => {
-    const upper = w.toUpperCase();
-    if (ACRONYMS.has(upper)) { first = false; return upper; }
-    const lower = w.toLowerCase();
-    if (!first && STOPWORDS.has(lower)) return lower;
-    first = false;
-    return lower[0].toUpperCase() + lower.slice(1);
-  });
 }
 
 function todayIso() {

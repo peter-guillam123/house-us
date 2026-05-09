@@ -3,8 +3,8 @@
 // Title-only results for now; snippet extraction (lazy granule fetch)
 // is the next commit.
 
-import { searchGovInfo, fetchGranuleText } from './api.js?v=2';
-import { renderResultRow, snippetHtml } from './format.js?v=2';
+import { searchGovInfo, fetchGranuleText } from './api.js?v=3';
+import { renderResultRow, snippetHtml } from './format.js?v=3';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('search-form');

@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300..700&family=Source+Serif+4:ital,opsz,wght@1,8..60,300..600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="style.css?v=1">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
   <header class="topbar">
@@ -122,6 +122,26 @@
 
     <section class="changelog">
       <h2>Diary</h2>
+
+      <div class="entry">
+        <p class="when">May 2026</p>
+        <h3>Lobbying tab polish &mdash; de-shouted names, snippet&rsquo;d descriptions, styled dropdowns</h3>
+        <p>
+          Three small fixes after a first walk-around:
+          LDA registrant and client names arrive in shouty all-caps
+          (&ldquo;AIR FORCE SERGEANTS ASSOCIATION&rdquo;) — same de-shout
+          heuristic as CREC titles now applies, with LLP/LLC/INC added to
+          the acronym list so law and lobbying firm suffixes stay
+          uppercase. Long issue descriptions were rendering in full,
+          which got monstrous for the firms that treat the
+          &ldquo;specific issues&rdquo; box as a memo — now snippet-windowed
+          to ~360 characters around the matched term, same shape as the
+          CREC search hits. And the Quarter / Issue Area dropdowns were
+          landing in browser-default chrome; they now wear the same
+          paper / rule / mono-chevron treatment as the rest of the
+          design.
+        </p>
+      </div>
 
       <div class="entry milestone">
         <p class="when">May 2026</p>

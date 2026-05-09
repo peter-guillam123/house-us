@@ -2,6 +2,46 @@
 // rendering shape can grow (snippets, witness lists, lobbying issue
 // fields) without bloating the orchestrator.
 
+// CREC titles arrive shouty — "CLIMATE CHANGE", "TRIBUTE TO MAJ. JOHN SMITH".
+// LDA registrant/client names arrive the same way ("MORRISON PUBLIC AFFAIRS
+// GROUP"). De-shout to title case, keeping common short words lowercase
+// and known acronyms uppercase. The acronym list isn't exhaustive — grow
+// it as new ones surface. The cost of adding an entry is one line.
+const STOPWORDS = new Set([
+  'of', 'to', 'in', 'on', 'at', 'for', 'and', 'or', 'a', 'an', 'the',
+  'as', 'by', 'with', 'into', 'from', 'vs',
+]);
+const ACRONYMS = new Set([
+  // Departments and major agencies
+  'CIA', 'FBI', 'NSA', 'DHS', 'DOJ', 'DOD', 'DOT', 'DOI', 'HHS', 'HUD',
+  'EPA', 'FDA', 'FCC', 'FAA', 'CDC', 'NIH', 'NIST', 'NASA', 'USPS',
+  'USDA', 'IRS', 'SEC', 'TSA', 'ICE', 'DEA', 'ATF', 'BLM', 'BIA', 'VA',
+  // Country / international
+  'USA', 'US', 'UN', 'NATO', 'EU', 'UK', 'NAFTA', 'WTO', 'WHO', 'IMF',
+  // Politics / law
+  'POTUS', 'VP', 'GOP', 'PAC', 'SCOTUS', 'NDAA',
+  // Other recurrent
+  'AI', 'COVID', 'LGBTQ', 'PFAS', 'CO2', 'GDP', 'GDPR', 'NRA', 'AARP',
+  // Company suffixes (LDA registrant/client names)
+  'LLC', 'LLP', 'INC', 'LP', 'LTD', 'PLLC', 'PC', 'GMBH', 'AG', 'SA',
+]);
+export function deShout(s) {
+  if (!s) return s;
+  const letters = s.replace(/[^A-Za-z]/g, '');
+  if (!letters.length) return s;
+  const upperRatio = letters.replace(/[^A-Z]/g, '').length / letters.length;
+  if (upperRatio < 0.8) return s; // already mixed-case
+  let first = true;
+  return s.replace(/\b(\w+)\b/g, (_, w) => {
+    const upper = w.toUpperCase();
+    if (ACRONYMS.has(upper)) { first = false; return upper; }
+    const lower = w.toLowerCase();
+    if (!first && STOPWORDS.has(lower)) return lower;
+    first = false;
+    return lower[0].toUpperCase() + lower.slice(1);
+  });
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function formatDate(iso) {

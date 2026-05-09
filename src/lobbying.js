@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate } from './format.js?v=2';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=3';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -132,23 +132,29 @@ function renderRow(f, term) {
   const money = formatMoney(f.income, f.expenses);
   const moneyHtml = money ? `<span class="result-money">${escapeHtml(money)}</span>` : '';
 
-  const headline = `${escapeHtml(f.registrant || '(no registrant)')} <span class="lda-arrow" aria-hidden="true">→</span> <span class="lda-client">${escapeHtml(f.client || '(no client)')}</span>`;
+  const registrant = deShout(f.registrant || '(no registrant)');
+  const client = deShout(f.client || '(no client)');
+  const headline = `${escapeHtml(registrant)} <span class="lda-arrow" aria-hidden="true">→</span> <span class="lda-client">${escapeHtml(client)}</span>`;
 
   // Each filing has 1..N activities — issue + description. Render them
   // as a small stack so the description (the journalistic gold) reads
-  // as the body of the row.
+  // as the body of the row. Long descriptions get the same snippet
+  // treatment as CREC search hits — window centred on the matched term,
+  // or first ~360 chars when there's no term to centre on.
   const activitiesHtml = (f.activities || []).map((a) => {
     const codeBit = a.code
       ? `<span class="lda-code" title="${escapeHtml(a.label || a.code)}">${escapeHtml(a.code)}</span>`
       : '';
     const descBit = a.description
-      ? `<p class="lda-desc">${highlight(a.description, term)}</p>`
+      ? `<p class="lda-desc">${snippetHtml(a.description, term, 360)}</p>`
       : '<p class="lda-desc muted">(no description provided)</p>';
-    const lobBit = (a.lobbyists || []).length
-      ? `<p class="lda-meta-line">Lobbyists: ${a.lobbyists.map((l) => highlight(l, term)).join(', ')}</p>`
+    const lobByists = (a.lobbyists || []).map((l) => deShout(l));
+    const lobBit = lobByists.length
+      ? `<p class="lda-meta-line">Lobbyists: ${lobByists.map((l) => highlight(l, term)).join(', ')}</p>`
       : '';
-    const tgtBit = (a.targets || []).length
-      ? `<p class="lda-meta-line">Targets: ${a.targets.slice(0, 6).map((t) => escapeHtml(t)).join(', ')}${a.targets.length > 6 ? `, +${a.targets.length - 6} more` : ''}</p>`
+    const targets = (a.targets || []).map((t) => deShout(t));
+    const tgtBit = targets.length
+      ? `<p class="lda-meta-line">Targets: ${targets.slice(0, 6).map((t) => highlight(t, term)).join(', ')}${targets.length > 6 ? `, +${targets.length - 6} more` : ''}</p>`
       : '';
     return `<div class="lda-activity">${codeBit}${descBit}${lobBit}${tgtBit}</div>`;
   }).join('');
