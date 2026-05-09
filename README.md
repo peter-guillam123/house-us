@@ -47,17 +47,40 @@ The full feasibility memo and the argument behind each call is on the
 | Search wiring | not yet written |
 | Deep Dive | not yet started |
 | Lobbying harvester | not yet started |
-| Cloudflare Worker | not yet written |
+| Cloudflare Worker | scaffold — proxies CORS-blocked GovInfo and injects the api.data.gov key server-side |
 
 ## Local dev
 
+The frontend is a static page; the Worker is a separate process.
+
 ```sh
+# terminal 1: frontend
 python3 -m http.server 8000
 # open http://localhost:8000
+
+# terminal 2: Worker (first time only)
+cd worker
+cp .dev.vars.example .dev.vars   # paste your api.data.gov key here
+npx wrangler dev --port 8787
 ```
 
-In scaffold mode the search box is visually present but inert — submit
-prints a status saying the wiring lands next.
+The Worker listens at `http://localhost:8787/?u=<encoded_target_url>`.
+Allowed hosts: `api.govinfo.gov`, `api.congress.gov`, `api.open.fec.gov`,
+`www.federalregister.gov`. The `api.data.gov` key is added server-side
+for the first three; Federal Register doesn't need a key.
+
+In scaffold mode the search box on the homepage is visually present
+but inert — submit prints a status saying the wiring lands next.
+
+## Worker deploy
+
+```sh
+cd worker
+npx wrangler secret put API_DATA_GOV_KEY   # paste your key when prompted
+npx wrangler deploy
+```
+
+Deployed URL is `https://house-us-proxy.<your-account>.workers.dev/`.
 
 ## Licence
 
