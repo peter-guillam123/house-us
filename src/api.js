@@ -87,12 +87,24 @@ function publicLink(collection, pkg, gr) {
 }
 
 // CREC titles arrive shouty — "CLIMATE CHANGE", "TRIBUTE TO MAJ. JOHN SMITH".
-// De-shout to title case, keeping common short words (to, of, in) lowercase.
-// Acronyms like CIA/FBI become Cia/Fbi — accepted as a v0 limitation rather
-// than maintaining a whitelist; the click-through link reaches the real doc.
+// De-shout to title case, keeping common short words lowercase and known
+// acronyms uppercase. The acronym list isn't exhaustive — grow it as new
+// ones surface. The cost of adding an entry is one line.
 const STOPWORDS = new Set([
   'of', 'to', 'in', 'on', 'at', 'for', 'and', 'or', 'a', 'an', 'the',
   'as', 'by', 'with', 'into', 'from', 'vs',
+]);
+const ACRONYMS = new Set([
+  // Departments and major agencies
+  'CIA', 'FBI', 'NSA', 'DHS', 'DOJ', 'DOD', 'DOT', 'DOI', 'HHS', 'HUD',
+  'EPA', 'FDA', 'FCC', 'FAA', 'CDC', 'NIH', 'NIST', 'NASA', 'USPS',
+  'USDA', 'IRS', 'SEC', 'TSA', 'ICE', 'DEA', 'ATF', 'BLM', 'BIA', 'VA',
+  // Country / international
+  'USA', 'US', 'UN', 'NATO', 'EU', 'UK', 'NAFTA', 'WTO', 'WHO', 'IMF',
+  // Politics / law
+  'POTUS', 'VP', 'GOP', 'PAC', 'SCOTUS', 'NDAA',
+  // Other recurrent
+  'AI', 'COVID', 'LGBTQ', 'PFAS', 'CO2', 'GDP', 'GDPR', 'NRA', 'AARP',
 ]);
 function deShout(s) {
   if (!s) return s;
@@ -101,10 +113,13 @@ function deShout(s) {
   const upperRatio = letters.replace(/[^A-Z]/g, '').length / letters.length;
   if (upperRatio < 0.8) return s; // already mixed-case
   let first = true;
-  return s.toLowerCase().replace(/\b(\w+)\b/g, (_, w) => {
-    if (!first && STOPWORDS.has(w)) return w;
+  return s.replace(/\b(\w+)\b/g, (_, w) => {
+    const upper = w.toUpperCase();
+    if (ACRONYMS.has(upper)) { first = false; return upper; }
+    const lower = w.toLowerCase();
+    if (!first && STOPWORDS.has(lower)) return lower;
     first = false;
-    return w[0].toUpperCase() + w.slice(1);
+    return lower[0].toUpperCase() + lower.slice(1);
   });
 }
 
