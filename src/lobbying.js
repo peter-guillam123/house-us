@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=12';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=13';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -113,8 +113,6 @@ function computeAggregates(filings) {
   const clientMoney = new Map();
   const firmStats = new Map();   // registrant -> {count, money}
   const lobbyistCount = new Map();
-  // Biggest single filings — kept as we iterate, sorted at the end.
-  const biggestFilings = [];
 
   for (const f of filings) {
     const dollar = parseFloat(f.income || f.expenses || 0);
@@ -128,9 +126,6 @@ function computeAggregates(filings) {
       cur.count += 1;
       cur.money += dollar;
       firmStats.set(f.registrant, cur);
-    }
-    if (dollar > 0) {
-      biggestFilings.push({ key: f.client || f.registrant || '(unknown)', value: dollar, period: f.period, url: f.url });
     }
     for (const a of f.activities || []) {
       for (const l of a.lobbyists || []) {
@@ -171,15 +166,13 @@ function computeAggregates(filings) {
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 10)
     .map(([, v]) => ({ key: v.label, value: v.count }));
-  biggestFilings.sort((a, b) => b.value - a.value);
-  const topBiggest = biggestFilings.slice(0, 10);
 
   return {
     count: filings.length, total,
     registrants: registrants.size,
     lobbyists: lobbyists.size,
     topIssue, p95,
-    topClients, topFirms, topLobbyists, topIssues, topBiggest,
+    topClients, topFirms, topLobbyists, topIssues,
   };
 }
 
@@ -232,12 +225,11 @@ function renderTopClientsChart(items) {
   </section>`;
 }
 
-// Four leaderboards — UK Deep Dive's three-board pattern stretched
-// to four because the editorial cuts that matter for lobbying don't
-// collapse cleanly to three. Targets dropped (mostly noise: Congress
-// targets dominate every list); top issues and biggest single filings
-// added in their place. The grid wraps to 2x2 / 1-column on narrower
-// viewports.
+// Three leaderboards — direct echo of UK Deep Dive's three-column
+// pattern. Cuts: top firms by disclosed money, most active named
+// lobbyists, top issues by activity count. Dropped "top targets"
+// (Congress dominates everything) and "biggest single filings"
+// (mostly restated top firms once filtered).
 function renderLeaderboards(agg) {
   const boards = [
     {
@@ -254,11 +246,6 @@ function renderLeaderboards(agg) {
       title: 'Top issues by activities',
       items: agg.topIssues,
       formatValue: (it) => String(it.value),
-    },
-    {
-      title: 'Biggest single filings',
-      items: agg.topBiggest,
-      formatValue: (it) => formatMoneyShort(it.value),
     },
   ];
   const html = boards.map((b) => {
