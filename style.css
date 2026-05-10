@@ -1266,11 +1266,11 @@ main {
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-end;
+  height: 220px;
   font-family: var(--mono);
   font-size: 0.66rem;
   letter-spacing: 0.08em;
   color: var(--ink-muted);
-  padding: 0.25rem 0 1.6rem;
 }
 .dd-cols {
   display: flex;

@@ -3,8 +3,8 @@
 // Title-only results for now; snippet extraction (lazy granule fetch)
 // is the next commit.
 
-import { searchGovInfo, fetchGranuleText } from './api.js?v=4';
-import { renderResultRow, snippetHtml } from './format.js?v=4';
+import { searchGovInfo, fetchGranuleText } from './api.js?v=17';
+import { renderResultRow, snippetHtml } from './format.js?v=17';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('search-form');
@@ -108,6 +108,7 @@ async function runSearch({ append = false } = {}) {
   }
   setStatus(append ? 'Loading more…' : 'Searching…');
   $loadMore.disabled = true;
+  $form.classList.add('is-loading');
   try {
     const res = await searchGovInfo({
       term: state.term,
@@ -140,6 +141,8 @@ async function runSearch({ append = false } = {}) {
   } catch (err) {
     setStatus(`Search failed: ${err.message}`, true);
     $loadMore.disabled = false;
+  } finally {
+    $form.classList.remove('is-loading');
   }
 }
 
