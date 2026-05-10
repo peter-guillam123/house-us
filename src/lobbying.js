@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=8';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=9';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -312,10 +312,13 @@ $results.addEventListener('click', (e) => {
   const btn = e.target.closest('button.lda-code');
   if (!btn) return;
   const code = btn.dataset.code;
+  console.log('[lozenge] click — code:', code, 'currentState.code:', state.code, 'target:', e.target.tagName);
   if (!code) return;
   state.code = state.code === code ? '' : code;
   $issueCode.value = state.code;
+  console.log('[lozenge] toggled — newState.code:', state.code, 'dropdown:', $issueCode.value);
   runSearch();
+  console.log('[lozenge] after runSearch — filtered:', state.filtered.length);
   $aggregate.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
