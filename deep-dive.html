@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300..700&family=Source+Serif+4:ital,opsz,wght@1,8..60,300..600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
   <header class="topbar">
@@ -111,17 +111,9 @@
 
     <div id="dd-stats" class="lda-aggregate" aria-live="polite"></div>
     <div id="dd-chart-wrap" class="dd-chart-wrap" hidden>
-      <h3 class="lda-overview-h">Monthly contributions</h3>
+      <h3 class="lda-overview-h">Monthly contributions <span class="dd-chart-hint">— click a bar to read the hits in Search</span></h3>
       <div id="dd-chart" class="dd-chart"></div>
     </div>
-
-    <section id="dd-results-section" class="dd-results-section" hidden>
-      <h3 class="lda-overview-h">Recent contributions</h3>
-      <ol id="dd-results" class="results"></ol>
-      <div class="more">
-        <button type="button" id="dd-load-more" hidden>Load more</button>
-      </div>
-    </section>
   </main>
 
   <footer>
@@ -135,6 +127,6 @@
     </div>
   </footer>
 
-  <script type="module" src="src/deepdive.js?v=2"></script>
+  <script type="module" src="src/deepdive.js?v=3"></script>
 </body>
 </html>

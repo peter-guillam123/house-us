@@ -12,8 +12,8 @@
 // concurrency 4 so a five-year span (60 queries) stays polite to the
 // proxy and the user's network.
 
-import { searchGovInfo } from './api.js?v=17';
-import { escapeHtml, renderResultRow } from './format.js?v=17';
+import { searchGovInfo } from './api.js?v=18';
+import { escapeHtml } from './format.js?v=18';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('dd-form');
@@ -23,18 +23,11 @@ const $status = $('dd-status');
 const $stats = $('dd-stats');
 const $chartWrap = $('dd-chart-wrap');
 const $chart = $('dd-chart');
-const $resultsSection = $('dd-results-section');
-const $results = $('dd-results');
-const $loadMore = $('dd-load-more');
 const $datePresets = $('dd-date-presets');
 const $customDates = $('dd-custom-dates');
 const $fromDate = $('dd-from-date');
 const $toDate = $('dd-to-date');
 const $collections = $('dd-collections');
-
-const RESULTS_PAGE_SIZE = 25;
-// Track the current dive's pagination state for "Load more"
-let currentResultsCtx = null;
 
 const ALL_COLLECTIONS = ['CREC', 'BILLS', 'CHRG', 'FR', 'CRPT'];
 const DEFAULT_COLLECTIONS = new Set(['CREC']);
@@ -117,9 +110,6 @@ async function runDive() {
   $stats.innerHTML = '';
   $chart.innerHTML = '';
   $chartWrap.hidden = true;
-  $results.replaceChildren();
-  $resultsSection.hidden = true;
-  $loadMore.hidden = true;
   $form.classList.add('is-loading');
 
   // Bounded concurrency 4: high enough to feel quick, low enough to stay
@@ -151,11 +141,10 @@ async function runDive() {
     return;
   }
 
-  // First mention + most recent + visible results in two queries:
-  //   ASC sort, page 1 of 1: the oldest hit
-  //   DESC sort, page 1 of 25: the newest hits, used both for "most
-  //     recent" stat and as the visible result list
-  let firstMention = null, mostRecent = null, recentItems = [], nextOffset = null;
+  // First mention + most recent: two count-1 queries, one ASC, one DESC.
+  // No bigger result list — Deep Dive's job is the chart and the bookends;
+  // clicking a bar takes you to Search to read the hits.
+  let firstMention = null, mostRecent = null;
   try {
     const [oldest, newest] = await Promise.all([
       searchGovInfo({
@@ -164,16 +153,12 @@ async function runDive() {
       }),
       searchGovInfo({
         term: state.term, collections, fromDate: from, toDate: to,
-        pageSize: RESULTS_PAGE_SIZE, sortField: 'dateIssued', sortOrder: 'DESC',
+        pageSize: 1, sortField: 'dateIssued', sortOrder: 'DESC',
       }),
     ]);
     firstMention = oldest.items[0] || null;
     mostRecent = newest.items[0] || null;
-    recentItems = newest.items;
-    nextOffset = newest.nextOffset;
   } catch { /* let stats render without the bookend dates */ }
-  currentResultsCtx = { collections, from, to };
-  currentResultsCtx.nextOffset = nextOffset;
 
   const total = monthlyCounts.reduce((a, b) => a + b, 0);
   const peakIdx = monthlyCounts.reduce((bi, v, i) => v > monthlyCounts[bi] ? i : bi, 0);
@@ -183,52 +168,14 @@ async function runDive() {
   renderStats({ total, peakMonth, peakCount, firstMention, mostRecent });
   renderChart(months, monthlyCounts);
   $chartWrap.hidden = total === 0;
-  // Visible results — paint the first 25 from the DESC query above.
-  if (recentItems.length) {
-    appendRows(recentItems);
-    $resultsSection.hidden = false;
-    $loadMore.hidden = !nextOffset || nextOffset === '*';
-  }
   if (total === 0) {
     setStatus('No contributions in that range. Try broadening the date filter or adding collections.');
   } else if (failed.length) {
     setStatus(`Showing ${total.toLocaleString()} contributions across ${months.length} months. ${failed.length} month${failed.length === 1 ? '' : 's'} failed to fetch — refresh to retry.`, true);
   } else {
-    setStatus(`Showing ${total.toLocaleString()} contributions across ${months.length} months.`);
+    setStatus(`Showing ${total.toLocaleString()} contributions across ${months.length} months. Click a bar to read the hits.`);
   }
   $form.classList.remove('is-loading');
-}
-
-function appendRows(items) {
-  const frag = document.createDocumentFragment();
-  for (const item of items) frag.appendChild(renderResultRow(item));
-  $results.appendChild(frag);
-}
-
-async function loadMoreResults() {
-  if (!currentResultsCtx || !currentResultsCtx.nextOffset) return;
-  $loadMore.disabled = true;
-  $form.classList.add('is-loading');
-  try {
-    const r = await searchGovInfo({
-      term: state.term,
-      collections: currentResultsCtx.collections,
-      fromDate: currentResultsCtx.from,
-      toDate: currentResultsCtx.to,
-      pageSize: RESULTS_PAGE_SIZE,
-      offsetMark: currentResultsCtx.nextOffset,
-      sortField: 'dateIssued',
-      sortOrder: 'DESC',
-    });
-    appendRows(r.items);
-    currentResultsCtx.nextOffset = r.nextOffset;
-    $loadMore.hidden = !r.nextOffset || r.nextOffset === '*';
-  } catch (err) {
-    setStatus(`Load more failed: ${err.message}`, true);
-  } finally {
-    $loadMore.disabled = false;
-    $form.classList.remove('is-loading');
-  }
 }
 
 // ---------- render: stat block ----------
@@ -278,15 +225,19 @@ function renderChart(months, counts) {
   const cols = months.map((m, i) => {
     const v = counts[i] || 0;
     const h = max > 0 ? (v / max * 100) : 0;
-    const showLabel = i % labelStride === 0 || i === months.length - 1;
-    return `<div class="dd-col" title="${escapeHtml(monthLabel(m))}: ${v.toLocaleString()}">
+    return `<button type="button" class="dd-col" data-month="${m}" data-count="${v}" title="${escapeHtml(monthLabel(m))}: ${v.toLocaleString()} — click to read in Search">
       <div class="dd-col-bar" style="height:${h.toFixed(1)}%"></div>
-      <div class="dd-col-label">${showLabel ? escapeHtml(monthLabelShort(m)) : ''}</div>
-    </div>`;
+    </button>`;
+  }).join('');
+  const xLabels = months.map((m, i) => {
+    const showLabel = i % labelStride === 0 || i === months.length - 1;
+    return `<div class="dd-x-label">${showLabel ? escapeHtml(monthLabelShort(m)) : ''}</div>`;
   }).join('');
   $chart.innerHTML = `
     <div class="dd-axis-y"><span>${max.toLocaleString()}</span><span>0</span></div>
     <div class="dd-cols">${cols}</div>
+    <div class="dd-axis-y-spacer" aria-hidden="true"></div>
+    <div class="dd-axis-x">${xLabels}</div>
   `;
 }
 
@@ -343,7 +294,24 @@ $form.addEventListener('submit', (e) => {
   runDive();
 });
 
-$loadMore.addEventListener('click', () => loadMoreResults());
+// Click a bar -> go to Search with the term + that month's date range
+// pre-filled. Deep Dive shows the shape; Search reads the hits.
+$chart.addEventListener('click', (e) => {
+  const btn = e.target.closest('button.dd-col');
+  if (!btn) return;
+  const month = btn.dataset.month;
+  const count = Number(btn.dataset.count) || 0;
+  if (!month || count === 0) return;
+  const params = new URLSearchParams();
+  if (state.term) params.set('q', state.term);
+  if (!sameSet(state.collections, DEFAULT_COLLECTIONS)) {
+    params.set('col', [...state.collections].join(','));
+  }
+  params.set('range', 'custom');
+  params.set('from', monthStart(month));
+  params.set('to', monthEnd(month));
+  window.location.href = `./?${params.toString()}`;
+});
 
 // ---------- URL state ----------
 

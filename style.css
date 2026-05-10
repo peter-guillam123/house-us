@@ -1249,24 +1249,33 @@ main {
    they don't collide. SVG would be cleaner for axes but flex columns
    keep the dependency footprint at zero.
    ================================================================ */
-.dd-chart-wrap {
-  margin: 1.25rem 0 2rem;
-}
+.dd-chart-wrap { margin: 1.25rem 0 2rem; }
 .dd-chart-wrap[hidden] { display: none; }
+.dd-chart-hint {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--ink-faint);
+  margin-left: 0.4rem;
+}
+
+/* Two-row grid: bars + y-axis on top, x-axis labels in their own row
+   below. Date labels sit cleanly beneath the chart baseline rather
+   than floating on top of it. */
 .dd-chart {
   display: grid;
   grid-template-columns: 3rem 1fr;
-  gap: 0.75rem;
+  grid-template-rows: 220px auto;
+  column-gap: 0.75rem;
+  row-gap: 0.6rem;
   align-items: stretch;
-  border-bottom: 1px solid var(--ink);
-  padding-bottom: 0.4rem;
 }
 .dd-axis-y {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-end;
-  height: 220px;
   font-family: var(--mono);
   font-size: 0.66rem;
   letter-spacing: 0.08em;
@@ -1276,16 +1285,23 @@ main {
   display: flex;
   align-items: stretch;
   gap: 4px;
-  height: 220px;
+  border-bottom: 1px solid var(--ink);
 }
+/* The bar itself is a button — clicking opens Search with the term
+   and that month's date range pre-filled. Reset native button chrome
+   and let hover deepen the navy so the affordance reads. */
 .dd-col {
   flex: 1 1 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  align-items: center;
-  position: relative;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font: inherit;
 }
 .dd-col-bar {
   width: 100%;
@@ -1294,18 +1310,28 @@ main {
   min-height: 1px;
   transition: background 100ms;
 }
-.dd-col:hover .dd-col-bar {
-  background: var(--accent-deep);
+.dd-col:hover .dd-col-bar { background: var(--accent-deep); }
+.dd-col:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-.dd-col-label {
-  position: absolute;
-  bottom: -1.4rem;
+.dd-axis-y-spacer { /* empty grid cell aligning x-axis with bars */ }
+.dd-axis-x {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.dd-x-label {
+  flex: 1 1 0;
+  min-width: 0;
   font-family: var(--mono);
   font-size: 0.62rem;
   letter-spacing: 0.06em;
   color: var(--ink-muted);
-  white-space: nowrap;
   text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 /* Active filter chip — solid navy pill with a clear button. Shows
