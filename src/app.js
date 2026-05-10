@@ -1,16 +1,23 @@
-// Search v0 orchestrator. State is the URL — every search updates the
+// Search orchestrator. State is the URL — every search updates the
 // query string so a result page is shareable and the back button works.
-// Title-only results for now; snippet extraction (lazy granule fetch)
-// is the next commit.
+//
+// The stat block and monthly bar chart used to live on a separate
+// "Deep Dive" page; now they sit between the filters and the results
+// here so a single search produces both the temporal shape and the
+// readable hits in one view. Bars on the chart act as date-range
+// filter shortcuts: click a month, the result list scopes to it.
 
-import { searchGovInfo, fetchGranuleText } from './api.js?v=17';
-import { renderResultRow, snippetHtml } from './format.js?v=17';
+import { searchGovInfo, fetchGranuleText } from './api.js?v=19';
+import { escapeHtml, renderResultRow, snippetHtml } from './format.js?v=19';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('search-form');
 const $q = $('q');
 const $stamp = $('index-stamp');
 const $status = $('status');
+const $stats = $('stats');
+const $chartWrap = $('chart-wrap');
+const $chart = $('chart');
 const $results = $('results');
 const $loadMore = $('load-more');
 const $datePresets = $('date-presets');
@@ -109,10 +116,25 @@ async function runSearch({ append = false } = {}) {
   setStatus(append ? 'Loading more…' : 'Searching…');
   $loadMore.disabled = true;
   $form.classList.add('is-loading');
+  if (!append) {
+    // Clear stats + chart at the start of a fresh search; they fill
+    // back in as the parallel monthly fanout returns.
+    $stats.innerHTML = '';
+    $chart.innerHTML = '';
+    $chartWrap.hidden = true;
+  }
   try {
+    const collections = [...state.collections];
+    // Kick the chart fanout off in parallel with the main search so
+    // results land fast (1 call) and the chart fills in shortly after
+    // (12 to 60 calls depending on date range).
+    const chartPromise = !append
+      ? buildOverview({ from, to, collections })
+      : null;
+
     const res = await searchGovInfo({
       term: state.term,
-      collections: [...state.collections],
+      collections,
       fromDate: from,
       toDate: to,
       pageSize: 20,
@@ -138,12 +160,168 @@ async function runSearch({ append = false } = {}) {
     } else {
       setStatus(`Showing ${state.items.length} of ${state.total.toLocaleString()} results.`);
     }
+
+    // Wait for the chart fanout to finish, then render. Failure to
+    // build the overview shouldn't break the result list.
+    if (chartPromise) {
+      try {
+        const overview = await chartPromise;
+        if (overview) renderOverview(overview);
+      } catch { /* chart silent fail */ }
+    }
   } catch (err) {
     setStatus(`Search failed: ${err.message}`, true);
     $loadMore.disabled = false;
   } finally {
     $form.classList.remove('is-loading');
   }
+}
+
+// ---------- overview: stat block + monthly chart ----------
+
+async function buildOverview({ from, to, collections }) {
+  const months = monthsInRange(from, to);
+  if (months.length === 0 || months.length > 144) return null;
+  const counts = new Array(months.length).fill(0);
+  let i = 0;
+  const worker = async () => {
+    while (i < months.length) {
+      const idx = i++;
+      const m = months[idx];
+      try {
+        const r = await searchGovInfo({
+          term: state.term, collections,
+          fromDate: monthStart(m), toDate: monthEnd(m), pageSize: 1,
+        });
+        counts[idx] = r.total;
+      } catch { /* leave as 0 */ }
+    }
+  };
+  await Promise.all([worker(), worker(), worker(), worker()]);
+
+  // Bookends: first mention (ASC) + most recent (DESC). Most recent is
+  // already the top of the visible result list, but we want the date
+  // alone for the stat cell — separate pageSize=1 query is fine.
+  let firstMention = null, mostRecent = null;
+  try {
+    const [oldest, newest] = await Promise.all([
+      searchGovInfo({
+        term: state.term, collections, fromDate: from, toDate: to,
+        pageSize: 1, sortField: 'dateIssued', sortOrder: 'ASC',
+      }),
+      searchGovInfo({
+        term: state.term, collections, fromDate: from, toDate: to,
+        pageSize: 1, sortField: 'dateIssued', sortOrder: 'DESC',
+      }),
+    ]);
+    firstMention = oldest.items[0] || null;
+    mostRecent = newest.items[0] || null;
+  } catch { /* let stats render without bookends */ }
+
+  const total = counts.reduce((a, b) => a + b, 0);
+  const peakIdx = counts.reduce((bi, v, i) => v > counts[bi] ? i : bi, 0);
+  return {
+    months, counts, total,
+    peakMonth: total > 0 ? months[peakIdx] : null,
+    peakCount: total > 0 ? counts[peakIdx] : 0,
+    firstMention, mostRecent,
+  };
+}
+
+function renderOverview({ months, counts, total, peakMonth, peakCount, firstMention, mostRecent }) {
+  if (total === 0) {
+    $stats.innerHTML = '';
+    $chartWrap.hidden = true;
+    return;
+  }
+  // Stat block
+  const cells = [
+    { num: total.toLocaleString(), label: total === 1 ? 'contribution' : 'contributions' },
+    {
+      num: peakMonth ? monthLabel(peakMonth) : '—',
+      label: peakCount ? `peak: ${peakCount.toLocaleString()} hit${peakCount === 1 ? '' : 's'}` : 'peak month',
+    },
+    {
+      num: firstMention ? formatDateShort(firstMention.date) : '—',
+      label: firstMention ? `first: ${truncate(firstMention.title, 36)}` : 'first mention',
+    },
+    {
+      num: mostRecent ? formatDateShort(mostRecent.date) : '—',
+      label: mostRecent ? `latest: ${truncate(mostRecent.title, 36)}` : 'most recent',
+    },
+  ];
+  $stats.innerHTML = cells.map((c) =>
+    `<div class="lda-stat"><span class="lda-stat-num">${escapeHtml(c.num)}</span><span class="lda-stat-label">${escapeHtml(c.label)}</span></div>`
+  ).join('');
+  // Chart
+  renderChart(months, counts);
+  $chartWrap.hidden = false;
+}
+
+function renderChart(months, counts) {
+  const max = Math.max(...counts, 1);
+  // Year labels: empty for every month except the first month of each
+  // distinct year in the range. That gives 1-2 labels for a year-long
+  // range, 5-6 for a five-year range — clean horizontal axis with no
+  // truncated month-name clutter.
+  const yearLabels = months.map((m, i) => {
+    const y = m.split('-')[0];
+    if (i === 0 || y !== months[i - 1].split('-')[0]) return y;
+    return '';
+  });
+  const cols = months.map((m, i) => {
+    const v = counts[i] || 0;
+    const h = max > 0 ? (v / max * 100) : 0;
+    return `<button type="button" class="dd-col" data-month="${m}" data-count="${v}" title="${escapeHtml(monthLabel(m))}: ${v.toLocaleString()} — click to scope results to this month">
+      <div class="dd-col-bar" style="height:${h.toFixed(1)}%"></div>
+    </button>`;
+  }).join('');
+  const xLabels = yearLabels.map((label) =>
+    `<div class="dd-x-label">${escapeHtml(label)}</div>`
+  ).join('');
+  $chart.innerHTML = `
+    <div class="dd-axis-y"><span>${max.toLocaleString()}</span><span>0</span></div>
+    <div class="dd-cols">${cols}</div>
+    <div class="dd-axis-y-spacer" aria-hidden="true"></div>
+    <div class="dd-axis-x">${xLabels}</div>
+  `;
+}
+
+// ---------- chart helpers (month math, date formatting) ----------
+
+function monthsInRange(fromIso, toIso) {
+  const months = [];
+  const [fy, fm] = fromIso.split('-').map(Number);
+  const [ty, tm] = toIso.split('-').map(Number);
+  let y = fy, m = fm;
+  while (y < ty || (y === ty && m <= tm)) {
+    months.push(`${y}-${String(m).padStart(2, '0')}`);
+    m += 1;
+    if (m > 12) { m = 1; y += 1; }
+  }
+  return months;
+}
+function monthStart(ym) { return `${ym}-01`; }
+function monthEnd(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const next = new Date(Date.UTC(y, m, 1));
+  next.setUTCDate(next.getUTCDate() - 1);
+  return next.toISOString().slice(0, 10);
+}
+function monthLabel(ym) {
+  const [y, m] = ym.split('-').map(Number);
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[m - 1]} ${y}`;
+}
+function formatDateShort(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]} ${y}`;
+}
+function truncate(s, n) {
+  if (!s) return '';
+  return s.length <= n ? s : s.slice(0, n - 1) + '…';
 }
 
 function appendRows(items) {
@@ -240,6 +418,21 @@ $form.addEventListener('submit', (e) => {
 });
 
 $loadMore.addEventListener('click', () => runSearch({ append: true }));
+
+// Bars are filter shortcuts — click a month, the search scopes to it.
+$chart.addEventListener('click', (e) => {
+  const btn = e.target.closest('button.dd-col');
+  if (!btn) return;
+  const month = btn.dataset.month;
+  const count = Number(btn.dataset.count) || 0;
+  if (!month || count === 0) return;
+  state.preset = 'custom';
+  state.fromDate = monthStart(month);
+  state.toDate = monthEnd(month);
+  paintDatePresets();
+  writeUrl();
+  runSearch({ append: false });
+});
 
 window.addEventListener('popstate', () => {
   readUrl();

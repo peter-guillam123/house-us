@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300..700&family=Source+Serif+4:ital,opsz,wght@1,8..60,300..600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
   <header class="topbar">
@@ -30,7 +30,6 @@
       </a>
       <nav class="topnav">
         <a href="./">Search</a>
-        <a href="deep-dive.html">Deep Dive</a>
         <a href="lobbying.html">Lobbying</a>
         <a href="about.html" aria-current="page">About</a>
       </nav>
@@ -126,30 +125,33 @@
 
       <div class="entry milestone">
         <p class="when">May 2026</p>
-        <h3>Deep Dive &mdash; a topic over time</h3>
+        <h3>Deep Dive folded into Search &mdash; one surface, chart on top</h3>
         <p>
-          Third surface lands. <a href="deep-dive.html">Deep Dive</a>
-          plots a search term month-by-month across Congress: stat
-          block (total contributions, peak month, first mention, most
-          recent), then a monthly bar chart. Same search box, same
-          collection toggles, same date presets as Search; the data
-          comes from a fanout of count-only queries (one per month,
-          bounded concurrency 4) through the Worker, so the proxy&rsquo;s
-          edge cache makes repeats instant.
+          Shipped Deep Dive as its own page first; pulled it back almost
+          immediately. With the speaker leaderboards UK Deep Dive earns
+          its keep on out of reach (GovInfo doesn&rsquo;t return speaker
+          IDs, so getting them needs a 10K-fetch granule harvest), a
+          standalone Deep Dive page with just a chart and a results
+          list was effectively Search-with-a-graph-on-top. Two surfaces,
+          one job between them, ambiguous mental model.
         </p>
         <p>
-          Honest gap, flagged because it&rsquo;s the visible difference
-          from UK Deep Dive: no &ldquo;Most Contributions&rdquo; /
-          &ldquo;In These Debates&rdquo; / &ldquo;Often Mentioned
-          Alongside&rdquo; leaderboards. UK Hansard&rsquo;s API hands
-          back speaker IDs per result; GovInfo Search doesn&rsquo;t,
-          and pulling speakers means fetching every CREC granule&rsquo;s
-          HTML and parsing &ldquo;Mr. WHITEHOUSE.&rdquo; out of the
-          prose. For a 10K-hit search that&rsquo;s 10K extra fetches,
-          which doesn&rsquo;t fit the live-API pattern. Those
-          leaderboards come back if/when we ship a CREC harvester (AU
-          pattern) that pre-extracts speakers; until then, Deep Dive
-          is the chart.
+          Folded the chart and stat block into <a href="./">Search</a>
+          itself. After every search, the page now renders the result
+          list (fast: one query) and, in parallel, fans out monthly
+          counts across the date range to draw a bar chart on top
+          (slower: 12 to 60 queries depending on the range, but the
+          Worker&rsquo;s edge cache makes repeats instant). Bars are
+          filter shortcuts &mdash; click a month and the result list
+          scopes to that month in place. One search, one URL, one
+          mental model.
+        </p>
+        <p>
+          X-axis labels switched to year-only at each year&rsquo;s first
+          month, after a first version showed truncated &ldquo;MA&rdquo;
+          and &ldquo;NO&rdquo; labels because month-name strings
+          didn&rsquo;t fit narrow columns. Speaker leaderboards still
+          on the table whenever a CREC harvester lands.
         </p>
       </div>
 
