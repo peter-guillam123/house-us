@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=3';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=4';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');

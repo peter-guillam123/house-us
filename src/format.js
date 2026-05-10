@@ -32,7 +32,7 @@ export function deShout(s) {
   const upperRatio = letters.replace(/[^A-Z]/g, '').length / letters.length;
   if (upperRatio < 0.8) return s; // already mixed-case
   let first = true;
-  return s.replace(/\b(\w+)\b/g, (_, w) => {
+  const cased = s.replace(/\b(\w+)\b/g, (_, w) => {
     const upper = w.toUpperCase();
     if (ACRONYMS.has(upper)) { first = false; return upper; }
     const lower = w.toLowerCase();
@@ -40,6 +40,13 @@ export function deShout(s) {
     first = false;
     return lower[0].toUpperCase() + lower.slice(1);
   });
+  // Lowercase the letter immediately after an apostrophe IF the word
+  // before the apostrophe is at least two letters long. Catches
+  // possessive 'S ("People's", "America's") and contractions ("Don't",
+  // "It's") without breaking name prefixes like O'Brien or D'Amato
+  // where the letter before the apostrophe is a single character.
+  return cased.replace(/(\w{2,})'([A-Z])/g, (_, before, after) =>
+    `${before}'${after.toLowerCase()}`);
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

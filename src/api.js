@@ -5,7 +5,7 @@
 
 // deShout lives in format.js so the Lobbying tab can use the same
 // heuristic on LDA registrant/client names.
-import { deShout } from './format.js?v=3';
+import { deShout } from './format.js?v=4';
 
 const PROXY = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
   ? 'http://localhost:8787'
@@ -66,6 +66,11 @@ export async function searchGovInfo(opts) {
 
 function normaliseItem(r) {
   const collection = r.collectionCode || '';
+  // The API hands us the canonical text URL per result. Use it rather
+  // than constructing one from packageId/granuleId — bills have no
+  // granuleId, FR documents do, CREC speeches do, and txtLink papers
+  // over all three patterns.
+  const txtLink = (r.download && r.download.txtLink) || '';
   return {
     id: r.granuleId || r.packageId || '',
     title: deShout(r.title || ''),
@@ -73,6 +78,7 @@ function normaliseItem(r) {
     collection,
     packageId: r.packageId || '',
     granuleId: r.granuleId || '',
+    txtLink,
     link: publicLink(collection, r.packageId, r.granuleId),
   };
 }
@@ -94,14 +100,16 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-// Fetch the plain-text body of a single CREC granule. GovInfo wraps the
-// speech in <html><body><pre>...</pre></body></html>; we extract the <pre>
-// content, strip residual tags and decode entities. The proxy edge-caches
-// these for 5 minutes, so re-running the same search is fast.
-export async function fetchGranuleText(packageId, granuleId) {
-  if (!packageId || !granuleId) return '';
-  const url = `${GOVINFO}/packages/${packageId}/granules/${granuleId}/htm`;
-  const r = await fetch(viaProxy(url));
+// Fetch the plain-text body of a GovInfo document (CREC granule, bill
+// package, FR notice, etc.). All collections wrap the body in
+// <html><body><pre>...</pre></body></html>, which makes extraction
+// uniform: pull the <pre> content, strip residual tags, decode entities.
+// The proxy edge-caches these for 5 minutes, so re-running the same
+// search is fast. Pass the txtLink straight from the search result —
+// the API gives the canonical URL per item.
+export async function fetchGranuleText(txtLink) {
+  if (!txtLink) return '';
+  const r = await fetch(viaProxy(txtLink));
   if (!r.ok) throw new Error(`Granule fetch failed: ${r.status}`);
   const html = await r.text();
   const m = html.match(/<pre[^>]*>([\s\S]*?)<\/pre>/i);

@@ -3,8 +3,8 @@
 // Title-only results for now; snippet extraction (lazy granule fetch)
 // is the next commit.
 
-import { searchGovInfo, fetchGranuleText } from './api.js?v=3';
-import { renderResultRow, snippetHtml } from './format.js?v=3';
+import { searchGovInfo, fetchGranuleText } from './api.js?v=4';
+import { renderResultRow, snippetHtml } from './format.js?v=4';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('search-form');
@@ -149,21 +149,22 @@ function appendRows(items) {
   $results.appendChild(frag);
 }
 
-// Fetch granule text for each visible CREC result and inject a snippet
+// Fetch document text for each visible result and inject a snippet
 // around the search term. Bounded concurrency 4 — high enough to feel
 // quick on a typical 20-row page, low enough to stay polite to the
 // proxy and friendly to mobile memory. Failures are silent: a row that
-// can't load a snippet just stays title-only.
+// can't load a snippet just stays title-only. Works across CREC, BILLS,
+// CHRG, FR, CRPT — they all wrap the body in <pre> the same way.
 async function fillSnippets(items, term) {
   let i = 0;
   const worker = async () => {
     while (i < items.length) {
       const item = items[i++];
-      if (item.collection !== 'CREC') continue; // other collections later
+      if (!item.txtLink) continue; // some collections lack a text URL
       const row = $results.querySelector(`li[data-id="${cssEscapeAttr(item.id)}"] .result-snippet`);
       if (!row) continue;
       try {
-        const text = await fetchGranuleText(item.packageId, item.granuleId);
+        const text = await fetchGranuleText(item.txtLink);
         if (!text) { row.dataset.snippet = 'empty'; continue; }
         row.innerHTML = snippetHtml(text, term);
         row.dataset.snippet = 'loaded';
