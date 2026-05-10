@@ -35,6 +35,11 @@ const state = {
   preset: 'year',
   fromDate: '',
   toDate: '',
+  // monthFilter is the inner filter set by clicking a chart bar.
+  // Format "YYYY-MM" or null. The chart always uses the outer range
+  // (preset/from/to) so it doesn't collapse to a single bar; the
+  // result list scopes to monthFilter when set, otherwise outer range.
+  monthFilter: null,
   offsetMark: '*',
   items: [],
   total: 0,
@@ -73,6 +78,8 @@ function readUrl() {
     state.fromDate = p.get('from') || '';
     state.toDate = p.get('to') || '';
   }
+  const month = p.get('month');
+  if (month && /^\d{4}-\d{2}$/.test(month)) state.monthFilter = month;
 }
 
 function writeUrl({ replace = false } = {}) {
@@ -86,6 +93,7 @@ function writeUrl({ replace = false } = {}) {
     if (state.fromDate) p.set('from', state.fromDate);
     if (state.toDate) p.set('to', state.toDate);
   }
+  if (state.monthFilter) p.set('month', state.monthFilter);
   const url = `${location.pathname}${p.toString() ? '?' + p.toString() : ''}`;
   if (replace) history.replaceState(null, '', url);
   else history.pushState(null, '', url);
@@ -99,7 +107,7 @@ function sameSet(a, b) {
 
 // ---------- search ----------
 
-async function runSearch({ append = false } = {}) {
+async function runSearch({ append = false, monthOnly = false } = {}) {
   if (!state.term.trim()) {
     setStatus('Type a term to search.');
     return;
@@ -108,35 +116,41 @@ async function runSearch({ append = false } = {}) {
     setStatus('Pick at least one collection.');
     return;
   }
-  const { from, to } = dateRangeForPreset(state.preset);
-  if (!from || !to) {
+  // Outer (chart) range from the preset/custom inputs.
+  const { from: outerFrom, to: outerTo } = dateRangeForPreset(state.preset);
+  if (!outerFrom || !outerTo) {
     setStatus('Pick a date range.');
     return;
   }
+  // Inner (result) range — the month filter clamps onto the outer range.
+  const resultFrom = state.monthFilter ? monthStart(state.monthFilter) : outerFrom;
+  const resultTo = state.monthFilter ? monthEnd(state.monthFilter) : outerTo;
+
   setStatus(append ? 'Loading more…' : 'Searching…');
   $loadMore.disabled = true;
   $form.classList.add('is-loading');
-  if (!append) {
-    // Clear stats + chart at the start of a fresh search; they fill
-    // back in as the parallel monthly fanout returns.
+  // Fresh search (not append, not month-only) clears the visible chart
+  // so the user knows it's about to refresh. monthOnly preserves the
+  // chart entirely; append touches neither.
+  if (!append && !monthOnly) {
     $stats.innerHTML = '';
     $chart.innerHTML = '';
     $chartWrap.hidden = true;
   }
+  paintMonthFilter();
   try {
     const collections = [...state.collections];
-    // Kick the chart fanout off in parallel with the main search so
-    // results land fast (1 call) and the chart fills in shortly after
-    // (12 to 60 calls depending on date range).
-    const chartPromise = !append
-      ? buildOverview({ from, to, collections })
+    // Chart only re-fans-out on a fresh search. Append and month-only
+    // skip — the chart is unchanged in those cases.
+    const chartPromise = !append && !monthOnly
+      ? buildOverview({ from: outerFrom, to: outerTo, collections })
       : null;
 
     const res = await searchGovInfo({
       term: state.term,
       collections,
-      fromDate: from,
-      toDate: to,
+      fromDate: resultFrom,
+      toDate: resultTo,
       pageSize: 20,
       offsetMark: append ? state.offsetMark : '*',
     });
@@ -149,24 +163,27 @@ async function runSearch({ append = false } = {}) {
     state.total = res.total;
     state.offsetMark = res.nextOffset || '*';
     appendRows(res.items);
-    // Kick off snippet fetches for the new batch (don't await — let the
-    // status line and load-more update immediately; snippets fade in).
     fillSnippets(res.items, state.term);
     const moreAvailable = state.items.length < state.total;
     $loadMore.hidden = !moreAvailable;
     $loadMore.disabled = false;
     if (state.total === 0) {
-      setStatus(`No results. Try broadening the date range or removing collections.`);
+      setStatus(state.monthFilter
+        ? `No results in ${monthLabel(state.monthFilter)}. Click the active bar again to clear the month filter.`
+        : `No results. Try broadening the date range or removing collections.`);
+    } else if (state.monthFilter) {
+      setStatus(`Showing ${state.items.length} of ${state.total.toLocaleString()} results in ${monthLabel(state.monthFilter)}.`);
     } else {
       setStatus(`Showing ${state.items.length} of ${state.total.toLocaleString()} results.`);
     }
 
-    // Wait for the chart fanout to finish, then render. Failure to
-    // build the overview shouldn't break the result list.
     if (chartPromise) {
       try {
         const overview = await chartPromise;
-        if (overview) renderOverview(overview);
+        if (overview) {
+          renderOverview(overview);
+          paintMonthFilter();
+        }
       } catch { /* chart silent fail */ }
     }
   } catch (err) {
@@ -174,6 +191,27 @@ async function runSearch({ append = false } = {}) {
     $loadMore.disabled = false;
   } finally {
     $form.classList.remove('is-loading');
+  }
+}
+
+// Apply / clear the visual highlight on the chart bar matching
+// state.monthFilter, and toggle the chip showing what's filtered.
+function paintMonthFilter() {
+  const buttons = $chart.querySelectorAll('button.dd-col');
+  for (const btn of buttons) {
+    btn.classList.toggle('is-active', btn.dataset.month === state.monthFilter);
+  }
+  const chip = $('month-filter-chip');
+  if (!chip) return;
+  if (state.monthFilter) {
+    chip.hidden = false;
+    chip.innerHTML = `
+      <span>Scoped to <strong>${escapeHtml(monthLabel(state.monthFilter))}</strong></span>
+      <button type="button" class="lda-filter-chip-clear" aria-label="Clear month filter">×</button>
+    `;
+  } else {
+    chip.hidden = true;
+    chip.innerHTML = '';
   }
 }
 
@@ -413,26 +451,39 @@ $toDate.addEventListener('change', () => { state.toDate = $toDate.value; });
 $form.addEventListener('submit', (e) => {
   e.preventDefault();
   state.term = $q.value.trim();
+  // A fresh term invalidates any month scope — clear it so the chart
+  // and result list both reflect the new search cleanly.
+  state.monthFilter = null;
   writeUrl();
   runSearch({ append: false });
 });
 
 $loadMore.addEventListener('click', () => runSearch({ append: true }));
 
-// Bars are filter shortcuts — click a month, the search scopes to it.
+// Bars are filter shortcuts — click a month, the result list scopes
+// to it (chart stays put, the bar tints red). Click the same bar
+// again to clear. Click a different bar to switch in place.
 $chart.addEventListener('click', (e) => {
   const btn = e.target.closest('button.dd-col');
   if (!btn) return;
   const month = btn.dataset.month;
   const count = Number(btn.dataset.count) || 0;
   if (!month || count === 0) return;
-  state.preset = 'custom';
-  state.fromDate = monthStart(month);
-  state.toDate = monthEnd(month);
-  paintDatePresets();
+  state.monthFilter = state.monthFilter === month ? null : month;
   writeUrl();
-  runSearch({ append: false });
+  runSearch({ append: false, monthOnly: true });
 });
+
+// Chip × clears the month filter and re-runs the result query.
+const $monthChip = $('month-filter-chip');
+if ($monthChip) {
+  $monthChip.addEventListener('click', (e) => {
+    if (!e.target.closest('.lda-filter-chip-clear')) return;
+    state.monthFilter = null;
+    writeUrl();
+    runSearch({ append: false, monthOnly: true });
+  });
+}
 
 window.addEventListener('popstate', () => {
   readUrl();

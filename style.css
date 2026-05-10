@@ -1315,6 +1315,16 @@ main {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* Active = the month the result list is currently scoped to. Old Glory
+   Red picks up the favicon flourish — same colour as the hero stop. */
+.dd-col.is-active .dd-col-bar { background: var(--accent-red); }
+.dd-col.is-active:hover .dd-col-bar { background: var(--accent-red); }
+
+/* Month-filter chip uses the same shape as Lobbying's filter chip but
+   sits between chart and results to read as "scoped to this month". */
+.month-chip {
+  margin: 0.4rem 0 1rem;
+}
 .dd-axis-y-spacer { /* empty grid cell aligning x-axis with bars */ }
 .dd-axis-x {
   display: flex;

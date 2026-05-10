@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300..700&family=Source+Serif+4:ital,opsz,wght@1,8..60,300..600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="style.css?v=15">
+  <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
   <header class="topbar">
@@ -117,6 +117,7 @@
       <h3 class="lda-overview-h">Monthly contributions <span class="dd-chart-hint">— click a bar to scope results to that month</span></h3>
       <div id="chart" class="dd-chart"></div>
     </div>
+    <div id="month-filter-chip" class="lda-filter-chip month-chip" hidden aria-live="polite"></div>
     <ol id="results" class="results"></ol>
     <div class="more">
       <button type="button" id="load-more" hidden>Load more</button>
@@ -135,6 +136,6 @@
     </div>
   </footer>
 
-  <script type="module" src="src/app.js?v=6"></script>
+  <script type="module" src="src/app.js?v=7"></script>
 </body>
 </html>
