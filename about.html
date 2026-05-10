@@ -123,6 +123,33 @@
     <section class="changelog">
       <h2>Diary</h2>
 
+      <div class="entry milestone">
+        <p class="when">May 2026</p>
+        <h3>Q1 2026 backfill &mdash; full quarter loaded overnight</h3>
+        <p>
+          The 1,500-filing sample shard was always a placeholder. Full
+          Q1 2026 ran overnight (~80 min anonymous, no API token), came
+          back with 20,971 filings and 44,501 activities — about 4.6 MB
+          gzipped on disk. The Lobbying tab now reads the full quarter:
+          search any registrant, any client, any lobbyist, any term in
+          the issue-description field across the entire batch. The
+          headline issue-codes shape sanity-checks against the kind of
+          quarter Q1 2026 was: Budget/Appropriations on top with 5,574
+          activities, then Healthcare 3,343, Tax 2,901, Defense 2,871,
+          Trade 2,109, Energy 1,765. Roughly what a budget-window
+          quarter ought to look like; if the top of the list were
+          something exotic that&rsquo;d be the story.
+        </p>
+        <p>
+          The hardened-harvester change committed before the run paid
+          for itself once: the log shows zero failed retries through the
+          full 80 minutes, but the broader retry envelope (URLError,
+          OSError, TimeoutError, 6 attempts each, 60-second timeouts)
+          would have caught any blip. Worth keeping the same shape for
+          historical-quarter backfills when those land.
+        </p>
+      </div>
+
       <div class="entry">
         <p class="when">May 2026</p>
         <h3>Lobbying tab polish &mdash; de-shouted names, snippet&rsquo;d descriptions, styled dropdowns</h3>
