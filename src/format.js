@@ -49,6 +49,27 @@ export function deShout(s) {
     `${before}'${after.toLowerCase()}`);
 }
 
+// Variant of deShout for person names. Skips the stopwords pass —
+// "AN", "OR", "AS" are real surnames (Korean, Hebrew, etc.) and
+// shouldn't be lowercased mid-name. Acronyms are still preserved
+// (a name might end in "II" or "PhD" — though we don't whitelist
+// those yet, the door's open).
+export function deShoutName(s) {
+  if (!s) return s;
+  const letters = s.replace(/[^A-Za-z]/g, '');
+  if (!letters.length) return s;
+  const upperRatio = letters.replace(/[^A-Z]/g, '').length / letters.length;
+  if (upperRatio < 0.8) return s;
+  const cased = s.replace(/\b(\w+)\b/g, (_, w) => {
+    const upper = w.toUpperCase();
+    if (ACRONYMS.has(upper)) return upper;
+    const lower = w.toLowerCase();
+    return lower[0].toUpperCase() + lower.slice(1);
+  });
+  return cased.replace(/(\w{2,})'([A-Z])/g, (_, before, after) =>
+    `${before}'${after.toLowerCase()}`);
+}
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export function formatDate(iso) {

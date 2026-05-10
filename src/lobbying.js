@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=17';
+import { escapeHtml, formatDate, deShout, deShoutName, snippetHtml } from './format.js?v=19';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -243,18 +243,21 @@ function renderLeaderboards(agg) {
     {
       title: 'Top firms by disclosed',
       items: agg.topFirms,
+      formatLabel: deShout,
       formatValue: (it) => formatMoneyShort(it.value),
       filter: (it) => `data-filter="term" data-value="${escapeHtml(deShout(it.key))}"`,
     },
     {
       title: 'Most active lobbyists',
       items: agg.topLobbyists,
+      formatLabel: deShoutName,
       formatValue: (it) => String(it.value),
-      filter: (it) => `data-filter="term" data-value="${escapeHtml(deShout(it.key))}"`,
+      filter: (it) => `data-filter="term" data-value="${escapeHtml(deShoutName(it.key))}"`,
     },
     {
       title: 'Top issues by activities',
       items: agg.topIssues,
+      formatLabel: (k) => k,
       formatValue: (it) => String(it.value),
       filter: (it) => `data-filter="code" data-value="${escapeHtml(it.code)}"`,
     },
@@ -262,7 +265,7 @@ function renderLeaderboards(agg) {
   const html = boards.map((b) => {
     if (!b.items || !b.items.length) return '';
     const rows = b.items.map((it, i) => {
-      const label = deShout(it.key);
+      const label = b.formatLabel(it.key);
       return `<li>
         <button type="button" class="lda-row-link" ${b.filter(it)} title="Filter to ${escapeHtml(label)}">
           <span class="lda-rank">${i + 1}</span>
@@ -360,7 +363,7 @@ function renderRow(f, term, barMax, activeCode) {
     const descBit = a.description
       ? `<p class="lda-desc">${codeBit}${snippetHtml(a.description, term, 360)}</p>`
       : `<p class="lda-desc muted">${codeBit}<span>(no description provided)</span></p>`;
-    const lobByists = (a.lobbyists || []).map((l) => deShout(l));
+    const lobByists = (a.lobbyists || []).map((l) => deShoutName(l));
     const lobBit = lobByists.length
       ? `<p class="lda-meta-line">Lobbyists: ${lobByists.map((l) => highlight(l, term)).join(', ')}</p>`
       : '';
