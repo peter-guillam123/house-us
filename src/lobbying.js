@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=16';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=17';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -29,6 +29,7 @@ const QUARTERS = [
   { year: 2026, quarter: 1, file: 'lda-2026-Q1.json.gz' },
   { year: 2025, quarter: 4, file: 'lda-2025-Q4.json.gz' },
   { year: 2025, quarter: 3, file: 'lda-2025-Q3.json.gz' },
+  { year: 2025, quarter: 2, file: 'lda-2025-Q2.json.gz' },
 ];
 
 const PAGE = 25;
