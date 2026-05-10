@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=10';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=11';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -16,6 +16,7 @@ const $q = $('q');
 const $stamp = $('index-stamp');
 const $status = $('status');
 const $aggregate = $('lda-aggregate');
+const $overview = $('lda-overview');
 const $filterChip = $('lda-filter-chip');
 const $results = $('results');
 const $loadMore = $('load-more');
@@ -90,6 +91,7 @@ function runSearch() {
   const agg = computeAggregates(state.filtered);
   state.barMax = agg.p95 || 1;
   $aggregate.innerHTML = renderAggregate(agg);
+  $overview.innerHTML = renderTopClientsChart(agg.topClients) + renderLeaderboards(agg);
   renderFilterChip();
   state.shown = 0;
   $results.replaceChildren();
@@ -107,12 +109,35 @@ function computeAggregates(filings) {
   const lobbyists = new Set();
   const issues = new Map();
   const dollars = [];
+  // Per-entity totals for the leaderboards and the top-clients chart.
+  const clientMoney = new Map();
+  const firmStats = new Map();   // registrant -> {count, money}
+  const lobbyistCount = new Map();
+  const targetCount = new Map();
+
   for (const f of filings) {
     const dollar = parseFloat(f.income || f.expenses || 0);
     if (dollar > 0) { total += dollar; dollars.push(dollar); }
     if (f.registrant) registrants.add(f.registrant);
+    if (f.client) {
+      clientMoney.set(f.client, (clientMoney.get(f.client) || 0) + dollar);
+    }
+    if (f.registrant) {
+      const cur = firmStats.get(f.registrant) || { count: 0, money: 0 };
+      cur.count += 1;
+      cur.money += dollar;
+      firmStats.set(f.registrant, cur);
+    }
     for (const a of f.activities || []) {
-      for (const l of a.lobbyists || []) if (l) lobbyists.add(l);
+      for (const l of a.lobbyists || []) {
+        if (l) {
+          lobbyists.add(l);
+          lobbyistCount.set(l, (lobbyistCount.get(l) || 0) + 1);
+        }
+      }
+      for (const t of a.targets || []) {
+        if (t) targetCount.set(t, (targetCount.get(t) || 0) + 1);
+      }
       if (a.code) {
         const cur = issues.get(a.code) || { label: a.label || a.code, count: 0 };
         cur.count += 1;
@@ -126,11 +151,32 @@ function computeAggregates(filings) {
   }
   dollars.sort((a, b) => a - b);
   const p95 = dollars.length ? dollars[Math.floor(dollars.length * 0.95)] : 0;
+
+  // Top 10 by relevant metric for each board.
+  const topClients = [...clientMoney.entries()]
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([key, value]) => ({ key, value }));
+  const topFirms = [...firmStats.entries()]
+    .sort((a, b) => b[1].money - a[1].money || b[1].count - a[1].count)
+    .slice(0, 10)
+    .map(([key, v]) => ({ key, value: v.money, count: v.count }));
+  const topLobbyists = [...lobbyistCount.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([key, value]) => ({ key, value }));
+  const topTargets = [...targetCount.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([key, value]) => ({ key, value }));
+
   return {
     count: filings.length, total,
     registrants: registrants.size,
     lobbyists: lobbyists.size,
     topIssue, p95,
+    topClients, topFirms, topLobbyists, topTargets,
   };
 }
 
@@ -160,6 +206,66 @@ function formatMoneyShort(n) {
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
   if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
   return `$${Math.round(n).toLocaleString('en-US')}`;
+}
+
+// Top-clients horizontal bar chart — fills the slot UK Deep Dive uses
+// for the monthly volume chart. With one quarter we can't do time
+// series, so the editorial question this answers is "who's spending
+// most" rather than "when's the spend happening."
+function renderTopClientsChart(items) {
+  if (!items || !items.length) return '';
+  const max = items[0].value || 1;
+  const rows = items.map(({ key, value }) => {
+    const pct = (value / max * 100).toFixed(1);
+    return `<li class="lda-chart-row">
+      <span class="lda-chart-label" title="${escapeHtml(deShout(key))}">${escapeHtml(deShout(key))}</span>
+      <span class="lda-chart-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>
+      <span class="lda-chart-val">${formatMoneyShort(value)}</span>
+    </li>`;
+  }).join('');
+  return `<section class="lda-overview-section">
+    <h3 class="lda-overview-h">Top clients by disclosed spend</h3>
+    <ol class="lda-chart">${rows}</ol>
+  </section>`;
+}
+
+// Three small leaderboards in a row — direct echo of UK Deep Dive's
+// Most Contributions / In These Debates / Often Mentioned Alongside.
+// For Lobbying the three angles are entity types: firms, lobbyists,
+// targets (gov entities lobbied).
+function renderLeaderboards(agg) {
+  const boards = [
+    {
+      title: 'Top firms by disclosed',
+      items: agg.topFirms,
+      formatValue: (it) => formatMoneyShort(it.value),
+    },
+    {
+      title: 'Most active lobbyists',
+      items: agg.topLobbyists,
+      formatValue: (it) => String(it.value),
+    },
+    {
+      title: 'Top targets',
+      items: agg.topTargets,
+      formatValue: (it) => String(it.value),
+    },
+  ];
+  const html = boards.map((b) => {
+    if (!b.items || !b.items.length) return '';
+    const rows = b.items.map((it, i) =>
+      `<li>
+        <span class="lda-rank">${i + 1}</span>
+        <span class="lda-name" title="${escapeHtml(deShout(it.key))}">${escapeHtml(deShout(it.key))}</span>
+        <span class="lda-val">${b.formatValue(it)}</span>
+      </li>`
+    ).join('');
+    return `<div class="lda-board">
+      <h3 class="lda-overview-h">${b.title}</h3>
+      <ol class="lda-board-list">${rows}</ol>
+    </div>`;
+  }).join('');
+  return html ? `<section class="lda-boards">${html}</section>` : '';
 }
 
 function renderMore() {

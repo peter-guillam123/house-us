@@ -1098,6 +1098,105 @@ main {
   align-items: center;
 }
 
+/* Overview dashboard — top-clients bar chart and three leaderboards.
+   Sits between the stat block and the result list. Quietly editorial:
+   serif names, mono captions, restrained navy bars, hairline rules. */
+.lda-overview { margin: 1.25rem 0 0; }
+.lda-overview:empty { display: none; }
+.lda-overview-h {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin: 0 0 0.85rem;
+}
+.lda-overview-section { margin: 0 0 2rem; }
+
+/* Top-clients chart: name | bar | value. Fills the slot UK Deep Dive
+   uses for monthly volume; with a single quarter we go for "who's
+   spending most" rather than "when's the spend happening." */
+.lda-chart { list-style: none; padding: 0; margin: 0; }
+.lda-chart-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 32%) 1fr 5rem;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.4rem 0;
+}
+.lda-chart-label {
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 14, 'wght' 380;
+  font-size: 0.95rem;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lda-chart-bar {
+  display: block;
+  height: 6px;
+  background: var(--paper-edge);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.lda-chart-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.lda-chart-val {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  text-align: right;
+}
+
+/* Three leaderboard columns. Direct echo of UK Deep Dive's
+   Most Contributions / In These Debates / Often Mentioned Alongside,
+   with Lobbying-flavoured cuts: firms, lobbyists, targets. */
+.lda-boards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem 2rem;
+  margin: 0 0 2rem;
+}
+.lda-board-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border-top: 1px solid var(--rule);
+}
+.lda-board-list li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 0.7rem;
+  align-items: baseline;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.lda-rank {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  text-align: right;
+}
+.lda-name {
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 14, 'wght' 380;
+  font-size: 0.92rem;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lda-val {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+}
+
 /* Active filter chip — solid navy pill with a clear button. Shows
    above the aggregate stat block whenever a code filter is on, so
    the active filter is unmissable. The × clears it in one click. */
