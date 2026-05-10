@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=14';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=16';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -23,9 +23,12 @@ const $loadMore = $('load-more');
 const $quarter = $('quarter');
 const $issueCode = $('issue-code');
 
-// Manifest of available quarter shards. Add new entries as backfill lands.
+// Manifest of available quarter shards. Newest first — drives the
+// dropdown order. Add new entries as backfill lands.
 const QUARTERS = [
   { year: 2026, quarter: 1, file: 'lda-2026-Q1.json.gz' },
+  { year: 2025, quarter: 4, file: 'lda-2025-Q4.json.gz' },
+  { year: 2025, quarter: 3, file: 'lda-2025-Q3.json.gz' },
 ];
 
 const PAGE = 25;
