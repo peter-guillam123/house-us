@@ -5,7 +5,7 @@
 
 // deShout lives in format.js so the Lobbying tab can use the same
 // heuristic on LDA registrant/client names.
-import { deShout } from './format.js?v=4';
+import { deShout } from './format.js?v=15';
 
 const PROXY = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
   ? 'http://localhost:8787'
@@ -44,7 +44,11 @@ export async function searchGovInfo(opts) {
     offsetMark: opts.offsetMark || '*',
     // Default to chronological — most recent first. Score-relevance sort
     // available via opts.sortField='score' (a UI toggle is on the list).
-    sorts: [{ field: opts.sortField || 'dateIssued', sortOrder: 'DESC' }],
+    // sortOrder defaults to DESC; pass 'ASC' for first-mention queries.
+    sorts: [{
+      field: opts.sortField || 'dateIssued',
+      sortOrder: opts.sortOrder || 'DESC',
+    }],
   };
   const r = await fetch(viaProxy(`${GOVINFO}/search`), {
     method: 'POST',

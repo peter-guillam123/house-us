@@ -1241,6 +1241,73 @@ main {
   color: var(--ink-soft);
 }
 
+/* ================================================================
+   Deep Dive — monthly bar chart for a topic over time.
+   Stat block reuses the .lda-aggregate class above. The chart itself
+   is plain CSS columns — one <div> per month, height proportional to
+   that month's hit count. Labels stride out as the range widens so
+   they don't collide. SVG would be cleaner for axes but flex columns
+   keep the dependency footprint at zero.
+   ================================================================ */
+.dd-chart-wrap {
+  margin: 1.25rem 0 2rem;
+}
+.dd-chart-wrap[hidden] { display: none; }
+.dd-chart {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  gap: 0.75rem;
+  align-items: stretch;
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 0.4rem;
+}
+.dd-axis-y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  padding: 0.25rem 0 1.6rem;
+}
+.dd-cols {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  height: 220px;
+}
+.dd-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  position: relative;
+}
+.dd-col-bar {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 1px 1px 0 0;
+  min-height: 1px;
+  transition: background 100ms;
+}
+.dd-col:hover .dd-col-bar {
+  background: var(--accent-deep);
+}
+.dd-col-label {
+  position: absolute;
+  bottom: -1.4rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
 /* Active filter chip — solid navy pill with a clear button. Shows
    above the aggregate stat block whenever a code filter is on, so
    the active filter is unmissable. The × clears it in one click. */

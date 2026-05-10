@@ -30,6 +30,7 @@
       </a>
       <nav class="topnav">
         <a href="./">Search</a>
+        <a href="deep-dive.html">Deep Dive</a>
         <a href="lobbying.html">Lobbying</a>
         <a href="about.html" aria-current="page">About</a>
       </nav>
@@ -122,6 +123,35 @@
 
     <section class="changelog">
       <h2>Diary</h2>
+
+      <div class="entry milestone">
+        <p class="when">May 2026</p>
+        <h3>Deep Dive &mdash; a topic over time</h3>
+        <p>
+          Third surface lands. <a href="deep-dive.html">Deep Dive</a>
+          plots a search term month-by-month across Congress: stat
+          block (total contributions, peak month, first mention, most
+          recent), then a monthly bar chart. Same search box, same
+          collection toggles, same date presets as Search; the data
+          comes from a fanout of count-only queries (one per month,
+          bounded concurrency 4) through the Worker, so the proxy&rsquo;s
+          edge cache makes repeats instant.
+        </p>
+        <p>
+          Honest gap, flagged because it&rsquo;s the visible difference
+          from UK Deep Dive: no &ldquo;Most Contributions&rdquo; /
+          &ldquo;In These Debates&rdquo; / &ldquo;Often Mentioned
+          Alongside&rdquo; leaderboards. UK Hansard&rsquo;s API hands
+          back speaker IDs per result; GovInfo Search doesn&rsquo;t,
+          and pulling speakers means fetching every CREC granule&rsquo;s
+          HTML and parsing &ldquo;Mr. WHITEHOUSE.&rdquo; out of the
+          prose. For a 10K-hit search that&rsquo;s 10K extra fetches,
+          which doesn&rsquo;t fit the live-API pattern. Those
+          leaderboards come back if/when we ship a CREC harvester (AU
+          pattern) that pre-extracts speakers; until then, Deep Dive
+          is the chart.
+        </p>
+      </div>
 
       <div class="entry milestone">
         <p class="when">May 2026</p>
