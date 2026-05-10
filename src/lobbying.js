@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=6';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=7';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -132,19 +132,24 @@ function computeAggregates(filings) {
   };
 }
 
-// "20 filings · $2.97M disclosed · 3 firms · 22 lobbyists · top issue Tech"
+// Stat block above the result list — serif display numbers with mono-caps
+// captions, so the figures read as the dominant thing on the page rather
+// than a footnote. Five cells: filings, total disclosed, firms, lobbyists,
+// top issue. Wraps to a grid on narrow viewports.
 function renderAggregate(agg) {
   if (!agg.count) return '';
-  const parts = [
-    `<strong>${agg.count.toLocaleString()}</strong> filing${agg.count === 1 ? '' : 's'}`,
-    `<strong>${formatMoneyShort(agg.total)}</strong> disclosed`,
-    `<strong>${agg.registrants.toLocaleString()}</strong> firm${agg.registrants === 1 ? '' : 's'}`,
-    `<strong>${agg.lobbyists.toLocaleString()}</strong> lobbyist${agg.lobbyists === 1 ? '' : 's'}`,
+  const cells = [
+    { num: agg.count.toLocaleString(), label: agg.count === 1 ? 'filing' : 'filings' },
+    { num: formatMoneyShort(agg.total), label: 'disclosed' },
+    { num: agg.registrants.toLocaleString(), label: agg.registrants === 1 ? 'firm' : 'firms' },
+    { num: agg.lobbyists.toLocaleString(), label: agg.lobbyists === 1 ? 'lobbyist' : 'lobbyists' },
   ];
   if (agg.topIssue) {
-    parts.push(`top issue <strong>${escapeHtml(agg.topIssue.label)}</strong>`);
+    cells.push({ num: escapeHtml(agg.topIssue.label), label: 'top issue' });
   }
-  return parts.join(' · ');
+  return cells.map((c) =>
+    `<div class="lda-stat"><span class="lda-stat-num">${c.num}</span><span class="lda-stat-label">${c.label}</span></div>`
+  ).join('');
 }
 
 function formatMoneyShort(n) {

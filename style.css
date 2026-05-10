@@ -1034,22 +1034,46 @@ main {
   font-weight: 500;
 }
 
-/* Aggregate banner above the result list — sums the filtered set in
-   one mono-caps line. Updates per filter. Numbers in stronger ink so
-   the eye picks up scale before reading. */
+/* Aggregate stat block above the result list. Serif display numbers
+   (so they read as the dominant figures on the page, not a caption),
+   mono-caps labels, ink rules top and bottom — newspaper-summary
+   register. Refreshes per filter. */
 .lda-aggregate {
-  margin: 0.6rem 0 1rem;
+  margin: 1rem 0 1.6rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem 0;
+}
+.lda-aggregate:empty {
+  display: none;
+}
+.lda-stat {
+  padding: 0 1.1rem;
+  border-right: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.lda-stat:last-child {
+  border-right: none;
+}
+.lda-stat-num {
+  font-family: var(--serif);
+  font-variation-settings: 'opsz' 32, 'wght' 500;
+  font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  line-height: 1.05;
+}
+.lda-stat-label {
   font-family: var(--mono);
-  font-size: 0.74rem;
-  letter-spacing: 0.06em;
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--ink-muted);
-  line-height: 1.6;
-}
-.lda-aggregate:empty { display: none; }
-.lda-aggregate strong {
-  color: var(--ink);
-  font-weight: 500;
 }
 
 /* Bar + money grouped — sits as one flex item in the meta row. */
