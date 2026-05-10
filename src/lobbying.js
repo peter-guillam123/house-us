@@ -8,13 +8,14 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=5';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=6';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
 const $q = $('q');
 const $stamp = $('index-stamp');
 const $status = $('status');
+const $aggregate = $('lda-aggregate');
 const $results = $('results');
 const $loadMore = $('load-more');
 const $quarter = $('quarter');
@@ -35,6 +36,7 @@ const state = {
   term: '',
   code: '',
   loadingShard: null,    // promise while a shard's loading
+  barMax: 1,             // 95th-percentile dollar value, scales the row bars
 };
 
 // ---------- shard loading ----------
@@ -80,6 +82,13 @@ function runSearch() {
     if (b.posted !== a.posted) return (b.posted || '').localeCompare(a.posted || '');
     return (a.registrant || '').localeCompare(b.registrant || '');
   });
+  // Aggregates: stats banner + 95th-percentile clamp for the per-row bars.
+  // 95th-percentile rather than max protects readability when a single
+  // outlier (a $40M in-house lobbying disclosure) would otherwise shrink
+  // every other bar to nothing.
+  const agg = computeAggregates(state.filtered);
+  state.barMax = agg.p95 || 1;
+  $aggregate.innerHTML = renderAggregate(agg);
   state.shown = 0;
   $results.replaceChildren();
   renderMore();
@@ -90,10 +99,66 @@ function runSearch() {
   );
 }
 
+function computeAggregates(filings) {
+  let total = 0;
+  const registrants = new Set();
+  const lobbyists = new Set();
+  const issues = new Map();
+  const dollars = [];
+  for (const f of filings) {
+    const dollar = parseFloat(f.income || f.expenses || 0);
+    if (dollar > 0) { total += dollar; dollars.push(dollar); }
+    if (f.registrant) registrants.add(f.registrant);
+    for (const a of f.activities || []) {
+      for (const l of a.lobbyists || []) if (l) lobbyists.add(l);
+      if (a.code) {
+        const cur = issues.get(a.code) || { label: a.label || a.code, count: 0 };
+        cur.count += 1;
+        issues.set(a.code, cur);
+      }
+    }
+  }
+  let topIssue = null;
+  for (const v of issues.values()) {
+    if (!topIssue || v.count > topIssue.count) topIssue = v;
+  }
+  dollars.sort((a, b) => a - b);
+  const p95 = dollars.length ? dollars[Math.floor(dollars.length * 0.95)] : 0;
+  return {
+    count: filings.length, total,
+    registrants: registrants.size,
+    lobbyists: lobbyists.size,
+    topIssue, p95,
+  };
+}
+
+// "20 filings · $2.97M disclosed · 3 firms · 22 lobbyists · top issue Tech"
+function renderAggregate(agg) {
+  if (!agg.count) return '';
+  const parts = [
+    `<strong>${agg.count.toLocaleString()}</strong> filing${agg.count === 1 ? '' : 's'}`,
+    `<strong>${formatMoneyShort(agg.total)}</strong> disclosed`,
+    `<strong>${agg.registrants.toLocaleString()}</strong> firm${agg.registrants === 1 ? '' : 's'}`,
+    `<strong>${agg.lobbyists.toLocaleString()}</strong> lobbyist${agg.lobbyists === 1 ? '' : 's'}`,
+  ];
+  if (agg.topIssue) {
+    parts.push(`top issue <strong>${escapeHtml(agg.topIssue.label)}</strong>`);
+  }
+  return parts.join(' · ');
+}
+
+function formatMoneyShort(n) {
+  if (!n) return '$0';
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  return `$${Math.round(n).toLocaleString('en-US')}`;
+}
+
 function renderMore() {
   const slice = state.filtered.slice(state.shown, state.shown + PAGE);
   const frag = document.createDocumentFragment();
-  for (const f of slice) frag.appendChild(renderRow(f, state.term.trim()));
+  for (const f of slice) frag.appendChild(renderRow(f, state.term.trim(), state.barMax));
   $results.appendChild(frag);
   state.shown += slice.length;
   $loadMore.hidden = state.shown >= state.filtered.length;
@@ -125,12 +190,26 @@ function escapeRegex(s) {
   return String(s).replace(/[.*+?^$()|[\]\\{}]/g, '\\$&');
 }
 
-function renderRow(f, term) {
+function renderRow(f, term, barMax) {
   const li = document.createElement('li');
   li.className = 'result lda-result';
 
   const money = formatMoney(f.income, f.expenses);
-  const moneyHtml = money ? `<span class="result-money">${escapeHtml(money)}</span>` : '';
+  const dollar = parseFloat(f.income || f.expenses || 0);
+  // Bar width is this filing's $ as a fraction of the 95th-percentile of
+  // the filtered set. Filings above the p95 max out at 100%. No money
+  // disclosed -> no bar.
+  const barPct = barMax > 0 && dollar > 0
+    ? Math.min(100, (dollar / barMax) * 100)
+    : 0;
+  const barHtml = barPct > 0
+    ? `<span class="lda-money-bar" aria-hidden="true"><span style="width:${barPct.toFixed(1)}%"></span></span>`
+    : '';
+  // Bar + money grouped as one flex item so they sit tight together
+  // rather than picking up the meta row's column gap between them.
+  const moneyHtml = money
+    ? `<span class="lda-money">${barHtml}<span class="result-money">${escapeHtml(money)}</span></span>`
+    : '';
 
   const registrant = deShout(f.registrant || '(no registrant)');
   const client = deShout(f.client || '(no client)');

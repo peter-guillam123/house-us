@@ -1034,6 +1034,50 @@ main {
   font-weight: 500;
 }
 
+/* Aggregate banner above the result list — sums the filtered set in
+   one mono-caps line. Updates per filter. Numbers in stronger ink so
+   the eye picks up scale before reading. */
+.lda-aggregate {
+  margin: 0.6rem 0 1rem;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+.lda-aggregate:empty { display: none; }
+.lda-aggregate strong {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* Bar + money grouped — sits as one flex item in the meta row. */
+.lda-money {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Per-row dollar bar — sits inline before the dollar amount in the
+   meta row. Width = this filing's $ over the 95th-percentile of the
+   filtered set, so a single $40M outlier doesn't crush the rest of
+   the bars to invisible. */
+.lda-money-bar {
+  display: inline-block;
+  width: 70px;
+  height: 4px;
+  background: var(--paper-edge);
+  border-radius: 2px;
+  vertical-align: 1px;
+  margin: 0 0.45rem 0 0;
+  overflow: hidden;
+}
+.lda-money-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
 /* staggered reveal */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(4px); }
