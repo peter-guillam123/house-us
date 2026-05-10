@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=11';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=12';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -113,7 +113,8 @@ function computeAggregates(filings) {
   const clientMoney = new Map();
   const firmStats = new Map();   // registrant -> {count, money}
   const lobbyistCount = new Map();
-  const targetCount = new Map();
+  // Biggest single filings — kept as we iterate, sorted at the end.
+  const biggestFilings = [];
 
   for (const f of filings) {
     const dollar = parseFloat(f.income || f.expenses || 0);
@@ -128,15 +129,15 @@ function computeAggregates(filings) {
       cur.money += dollar;
       firmStats.set(f.registrant, cur);
     }
+    if (dollar > 0) {
+      biggestFilings.push({ key: f.client || f.registrant || '(unknown)', value: dollar, period: f.period, url: f.url });
+    }
     for (const a of f.activities || []) {
       for (const l of a.lobbyists || []) {
         if (l) {
           lobbyists.add(l);
           lobbyistCount.set(l, (lobbyistCount.get(l) || 0) + 1);
         }
-      }
-      for (const t of a.targets || []) {
-        if (t) targetCount.set(t, (targetCount.get(t) || 0) + 1);
       }
       if (a.code) {
         const cur = issues.get(a.code) || { label: a.label || a.code, count: 0 };
@@ -166,17 +167,19 @@ function computeAggregates(filings) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
     .map(([key, value]) => ({ key, value }));
-  const topTargets = [...targetCount.entries()]
-    .sort((a, b) => b[1] - a[1])
+  const topIssues = [...issues.entries()]
+    .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 10)
-    .map(([key, value]) => ({ key, value }));
+    .map(([, v]) => ({ key: v.label, value: v.count }));
+  biggestFilings.sort((a, b) => b.value - a.value);
+  const topBiggest = biggestFilings.slice(0, 10);
 
   return {
     count: filings.length, total,
     registrants: registrants.size,
     lobbyists: lobbyists.size,
     topIssue, p95,
-    topClients, topFirms, topLobbyists, topTargets,
+    topClients, topFirms, topLobbyists, topIssues, topBiggest,
   };
 }
 
@@ -229,10 +232,12 @@ function renderTopClientsChart(items) {
   </section>`;
 }
 
-// Three small leaderboards in a row — direct echo of UK Deep Dive's
-// Most Contributions / In These Debates / Often Mentioned Alongside.
-// For Lobbying the three angles are entity types: firms, lobbyists,
-// targets (gov entities lobbied).
+// Four leaderboards — UK Deep Dive's three-board pattern stretched
+// to four because the editorial cuts that matter for lobbying don't
+// collapse cleanly to three. Targets dropped (mostly noise: Congress
+// targets dominate every list); top issues and biggest single filings
+// added in their place. The grid wraps to 2x2 / 1-column on narrower
+// viewports.
 function renderLeaderboards(agg) {
   const boards = [
     {
@@ -246,9 +251,14 @@ function renderLeaderboards(agg) {
       formatValue: (it) => String(it.value),
     },
     {
-      title: 'Top targets',
-      items: agg.topTargets,
+      title: 'Top issues by activities',
+      items: agg.topIssues,
       formatValue: (it) => String(it.value),
+    },
+    {
+      title: 'Biggest single filings',
+      items: agg.topBiggest,
+      formatValue: (it) => formatMoneyShort(it.value),
     },
   ];
   const html = boards.map((b) => {
