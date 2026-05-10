@@ -1098,6 +1098,66 @@ main {
   align-items: center;
 }
 
+/* Active filter chip — solid navy pill with a clear button. Shows
+   above the aggregate stat block whenever a code filter is on, so
+   the active filter is unmissable. The × clears it in one click. */
+.lda-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.6rem 0 0.3rem;
+  padding: 0.45rem 0.45rem 0.45rem 0.95rem;
+  background: var(--accent);
+  color: var(--paper);
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.lda-filter-chip[hidden] { display: none; }
+.lda-filter-chip-label strong {
+  font-weight: 500;
+  /* slight emphasis on the issue name itself */
+}
+.lda-filter-chip-clear {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(246, 243, 236, 0.15);
+  border: none;
+  color: var(--paper);
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--sans);
+  transition: background 120ms ease;
+}
+.lda-filter-chip-clear:hover {
+  background: rgba(246, 243, 236, 0.3);
+}
+.lda-filter-chip-clear:focus-visible {
+  outline: 2px solid var(--paper);
+  outline-offset: 2px;
+}
+
+/* Footnote on a row when activities were hidden by the active filter.
+   Quiet caption ink so it reads as context, not a result. */
+.lda-hidden-note {
+  order: 6;
+  margin: 0.4rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
 /* Per-row dollar bar — sits inline before the dollar amount in the
    meta row. Width = this filing's $ over the 95th-percentile of the
    filtered set, so a single $40M outlier doesn't crush the rest of

@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=9';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=10';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -16,6 +16,7 @@ const $q = $('q');
 const $stamp = $('index-stamp');
 const $status = $('status');
 const $aggregate = $('lda-aggregate');
+const $filterChip = $('lda-filter-chip');
 const $results = $('results');
 const $loadMore = $('load-more');
 const $quarter = $('quarter');
@@ -89,6 +90,7 @@ function runSearch() {
   const agg = computeAggregates(state.filtered);
   state.barMax = agg.p95 || 1;
   $aggregate.innerHTML = renderAggregate(agg);
+  renderFilterChip();
   state.shown = 0;
   $results.replaceChildren();
   renderMore();
@@ -163,7 +165,7 @@ function formatMoneyShort(n) {
 function renderMore() {
   const slice = state.filtered.slice(state.shown, state.shown + PAGE);
   const frag = document.createDocumentFragment();
-  for (const f of slice) frag.appendChild(renderRow(f, state.term.trim(), state.barMax));
+  for (const f of slice) frag.appendChild(renderRow(f, state.term.trim(), state.barMax, state.code));
   $results.appendChild(frag);
   state.shown += slice.length;
   $loadMore.hidden = state.shown >= state.filtered.length;
@@ -195,7 +197,7 @@ function escapeRegex(s) {
   return String(s).replace(/[.*+?^$()|[\]\\{}]/g, '\\$&');
 }
 
-function renderRow(f, term, barMax) {
+function renderRow(f, term, barMax, activeCode) {
   const li = document.createElement('li');
   li.className = 'result lda-result';
 
@@ -226,10 +228,15 @@ function renderRow(f, term, barMax) {
     : headline;
 
   // Each filing has 1..N activities — issue + description. The issue
-  // label sits inline at the start of the description as a small pill,
-  // so we get the visual break without the empty rectangle that the
-  // standalone label row used to leave hanging.
-  const activitiesHtml = (f.activities || []).map((a) => {
+  // label sits inline at the start of the description as a small pill.
+  // When a code filter is active we render only the matching activity
+  // rows, so the user sees what scoped the result rather than a
+  // mixed-issue block that reads as "the filter didn't work".
+  const visible = activeCode
+    ? (f.activities || []).filter((a) => a.code === activeCode)
+    : (f.activities || []);
+  const hidden = (f.activities || []).length - visible.length;
+  const activitiesHtml = visible.map((a) => {
     const codeBit = a.code
       ? `<button type="button" class="lda-code" data-code="${escapeHtml(a.code)}" title="Filter to ${escapeHtml(a.label || a.code)}">${escapeHtml(a.label || a.code)}</button> `
       : '';
@@ -246,6 +253,11 @@ function renderRow(f, term, barMax) {
       : '';
     return `<div class="lda-activity">${descBit}${lobBit}${tgtBit}</div>`;
   }).join('');
+  // Footnote when activities were hidden by the filter — clear cue that
+  // there's more to this filing if the user clears the filter.
+  const hiddenNote = hidden > 0
+    ? `<p class="lda-hidden-note">+ ${hidden} other ${hidden === 1 ? 'activity' : 'activities'} not shown (cleared by removing the filter)</p>`
+    : '';
 
   li.innerHTML = `
     <h2 class="result-title">${titleHtml}</h2>
@@ -255,6 +267,7 @@ function renderRow(f, term, barMax) {
       ${moneyHtml}
     </div>
     ${activitiesHtml}
+    ${hiddenNote}
   `;
   return li;
 }
@@ -262,6 +275,28 @@ function renderRow(f, term, barMax) {
 function setStatus(msg, isError = false) {
   $status.textContent = msg;
   $status.classList.toggle('error', !!isError);
+}
+
+// Visible cue when a code filter's active. Click the × to clear; the
+// dropdown and the row activities re-render in sync.
+function renderFilterChip() {
+  if (!state.code) {
+    $filterChip.hidden = true;
+    $filterChip.innerHTML = '';
+    return;
+  }
+  // Find the human label for the current code by looking it up in the
+  // shard's first matching activity.
+  let label = state.code;
+  for (const f of state.filings) {
+    const a = (f.activities || []).find((x) => x.code === state.code);
+    if (a) { label = a.label || a.code; break; }
+  }
+  $filterChip.hidden = false;
+  $filterChip.innerHTML = `
+    <span class="lda-filter-chip-label">Filtered to <strong>${escapeHtml(label)}</strong></span>
+    <button type="button" class="lda-filter-chip-clear" aria-label="Clear filter">×</button>
+  `;
 }
 
 // ---------- filter wiring ----------
@@ -303,6 +338,14 @@ $form.addEventListener('submit', (e) => {
 
 $loadMore.addEventListener('click', () => renderMore());
 
+// Clear the active filter from the chip's × button.
+$filterChip.addEventListener('click', (e) => {
+  if (!e.target.closest('.lda-filter-chip-clear')) return;
+  state.code = '';
+  $issueCode.value = '';
+  runSearch();
+});
+
 // Issue lozenges in result rows are filter shortcuts. Click toggles the
 // code filter — clicking the same lozenge again clears it. Sync the
 // dropdown so the canonical "current filter" UI stays coherent. Scroll
@@ -312,13 +355,10 @@ $results.addEventListener('click', (e) => {
   const btn = e.target.closest('button.lda-code');
   if (!btn) return;
   const code = btn.dataset.code;
-  console.log('[lozenge] click — code:', code, 'currentState.code:', state.code, 'target:', e.target.tagName);
   if (!code) return;
   state.code = state.code === code ? '' : code;
   $issueCode.value = state.code;
-  console.log('[lozenge] toggled — newState.code:', state.code, 'dropdown:', $issueCode.value);
   runSearch();
-  console.log('[lozenge] after runSearch — filtered:', state.filtered.length);
   $aggregate.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
