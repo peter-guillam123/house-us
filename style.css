@@ -1118,12 +1118,34 @@ main {
    uses for monthly volume; with a single quarter we go for "who's
    spending most" rather than "when's the spend happening." */
 .lda-chart { list-style: none; padding: 0; margin: 0; }
+.lda-chart > li { padding: 0; }
+/* The chart row is a button — click filters the result set to that
+   client. Reset native button styling and adopt the original row
+   layout. Subtle hover wash invites the click without dominating. */
 .lda-chart-row {
   display: grid;
   grid-template-columns: minmax(180px, 32%) 1fr 5rem;
   gap: 0.85rem;
   align-items: center;
-  padding: 0.4rem 0;
+  width: 100%;
+  padding: 0.4rem 0.5rem;
+  margin: 0 -0.5rem;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 100ms ease;
+}
+.lda-chart-row:hover {
+  background: var(--paper-deep);
+}
+.lda-chart-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  background: var(--paper-deep);
 }
 .lda-chart-label {
   font-family: var(--serif);
@@ -1169,12 +1191,34 @@ main {
   border-top: 1px solid var(--rule);
 }
 .lda-board-list li {
+  border-bottom: 1px solid var(--rule);
+  padding: 0;
+}
+/* Each row is a button — click filters the result set. Reset native
+   button styling, take the row's grid, hover deepens to invite the
+   click. Same a11y pattern as the chart rows above. */
+.lda-row-link {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;
   gap: 0.7rem;
   align-items: baseline;
-  padding: 0.55rem 0;
-  border-bottom: 1px solid var(--rule);
+  width: 100%;
+  padding: 0.55rem 0.5rem;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.lda-row-link:hover {
+  background: var(--paper-deep);
+}
+.lda-row-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--paper-deep);
 }
 .lda-rank {
   font-family: var(--mono);

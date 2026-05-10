@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=13';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=14';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -165,7 +165,7 @@ function computeAggregates(filings) {
   const topIssues = [...issues.entries()]
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 10)
-    .map(([, v]) => ({ key: v.label, value: v.count }));
+    .map(([code, v]) => ({ key: v.label, code, value: v.count }));
 
   return {
     count: filings.length, total,
@@ -207,16 +207,20 @@ function formatMoneyShort(n) {
 // Top-clients horizontal bar chart — fills the slot UK Deep Dive uses
 // for the monthly volume chart. With one quarter we can't do time
 // series, so the editorial question this answers is "who's spending
-// most" rather than "when's the spend happening."
+// most" rather than "when's the spend happening." Each row's a button
+// that filters the result set to that client.
 function renderTopClientsChart(items) {
   if (!items || !items.length) return '';
   const max = items[0].value || 1;
   const rows = items.map(({ key, value }) => {
     const pct = (value / max * 100).toFixed(1);
-    return `<li class="lda-chart-row">
-      <span class="lda-chart-label" title="${escapeHtml(deShout(key))}">${escapeHtml(deShout(key))}</span>
-      <span class="lda-chart-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>
-      <span class="lda-chart-val">${formatMoneyShort(value)}</span>
+    const label = deShout(key);
+    return `<li>
+      <button type="button" class="lda-chart-row" data-filter="term" data-value="${escapeHtml(label)}" title="Filter to ${escapeHtml(label)}">
+        <span class="lda-chart-label">${escapeHtml(label)}</span>
+        <span class="lda-chart-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>
+        <span class="lda-chart-val">${formatMoneyShort(value)}</span>
+      </button>
     </li>`;
   }).join('');
   return `<section class="lda-overview-section">
@@ -236,27 +240,33 @@ function renderLeaderboards(agg) {
       title: 'Top firms by disclosed',
       items: agg.topFirms,
       formatValue: (it) => formatMoneyShort(it.value),
+      filter: (it) => `data-filter="term" data-value="${escapeHtml(deShout(it.key))}"`,
     },
     {
       title: 'Most active lobbyists',
       items: agg.topLobbyists,
       formatValue: (it) => String(it.value),
+      filter: (it) => `data-filter="term" data-value="${escapeHtml(deShout(it.key))}"`,
     },
     {
       title: 'Top issues by activities',
       items: agg.topIssues,
       formatValue: (it) => String(it.value),
+      filter: (it) => `data-filter="code" data-value="${escapeHtml(it.code)}"`,
     },
   ];
   const html = boards.map((b) => {
     if (!b.items || !b.items.length) return '';
-    const rows = b.items.map((it, i) =>
-      `<li>
-        <span class="lda-rank">${i + 1}</span>
-        <span class="lda-name" title="${escapeHtml(deShout(it.key))}">${escapeHtml(deShout(it.key))}</span>
-        <span class="lda-val">${b.formatValue(it)}</span>
-      </li>`
-    ).join('');
+    const rows = b.items.map((it, i) => {
+      const label = deShout(it.key);
+      return `<li>
+        <button type="button" class="lda-row-link" ${b.filter(it)} title="Filter to ${escapeHtml(label)}">
+          <span class="lda-rank">${i + 1}</span>
+          <span class="lda-name">${escapeHtml(label)}</span>
+          <span class="lda-val">${b.formatValue(it)}</span>
+        </button>
+      </li>`;
+    }).join('');
     return `<div class="lda-board">
       <h3 class="lda-overview-h">${b.title}</h3>
       <ol class="lda-board-list">${rows}</ol>
@@ -447,6 +457,29 @@ $filterChip.addEventListener('click', (e) => {
   state.code = '';
   $issueCode.value = '';
   runSearch();
+});
+
+// Overview entries (chart bars + leaderboard rows) are filter shortcuts.
+// Term-typed entries set the search box (firms, lobbyists, clients);
+// code-typed entries set the issue dropdown. Existing filters are
+// preserved — clicking a firm in a code-filtered context narrows
+// further rather than replacing.
+$overview.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-filter]');
+  if (!btn) return;
+  const type = btn.dataset.filter;
+  const value = btn.dataset.value;
+  if (type === 'term') {
+    state.term = value;
+    $q.value = value;
+  } else if (type === 'code') {
+    state.code = value;
+    $issueCode.value = value;
+  } else {
+    return;
+  }
+  runSearch();
+  $aggregate.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 // Issue lozenges in result rows are filter shortcuts. Click toggles the
