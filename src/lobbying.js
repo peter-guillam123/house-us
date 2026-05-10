@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=7';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=8';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -231,7 +231,7 @@ function renderRow(f, term, barMax) {
   // standalone label row used to leave hanging.
   const activitiesHtml = (f.activities || []).map((a) => {
     const codeBit = a.code
-      ? `<span class="lda-code" title="${escapeHtml(a.code)}">${escapeHtml(a.label || a.code)}</span> `
+      ? `<button type="button" class="lda-code" data-code="${escapeHtml(a.code)}" title="Filter to ${escapeHtml(a.label || a.code)}">${escapeHtml(a.label || a.code)}</button> `
       : '';
     const descBit = a.description
       ? `<p class="lda-desc">${codeBit}${snippetHtml(a.description, term, 360)}</p>`
@@ -302,6 +302,22 @@ $form.addEventListener('submit', (e) => {
 });
 
 $loadMore.addEventListener('click', () => renderMore());
+
+// Issue lozenges in result rows are filter shortcuts. Click toggles the
+// code filter — clicking the same lozenge again clears it. Sync the
+// dropdown so the canonical "current filter" UI stays coherent. Scroll
+// the aggregate stat block back into view so the new result-set scope
+// is what the user sees first.
+$results.addEventListener('click', (e) => {
+  const btn = e.target.closest('button.lda-code');
+  if (!btn) return;
+  const code = btn.dataset.code;
+  if (!code) return;
+  state.code = state.code === code ? '' : code;
+  $issueCode.value = state.code;
+  runSearch();
+  $aggregate.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 
 // ---------- init ----------
 
