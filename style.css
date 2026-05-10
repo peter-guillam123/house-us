@@ -979,15 +979,6 @@ main {
   letter-spacing: 0.06em;
   color: var(--ink-muted);
 }
-.lda-link {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-}
-.lda-link:hover { color: var(--accent); }
-
 .lda-activity {
   order: 5;
   margin: 0.55rem 0 0;
@@ -997,18 +988,22 @@ main {
   gap: 0.2rem;
 }
 .lda-activity + .lda-activity { margin-top: 0.4rem; }
+/* Issue label sits inline at the start of the description, like a
+   small editorial flag — gives the visual break Chris wanted from the
+   old standalone box without leaving a wide empty stripe to its right. */
 .lda-code {
   display: inline-block;
-  align-self: start;
-  font-family: var(--mono);
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
   color: var(--accent);
-  border: 1px solid currentColor;
-  padding: 0.08rem 0.35rem;
-  border-radius: 2px;
-  margin-bottom: 0.15rem;
+  background: var(--accent-tint);
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  margin-right: 0.45rem;
+  vertical-align: 1px;
+  white-space: nowrap;
 }
 .lda-desc {
   margin: 0;

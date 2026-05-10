@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=4';
+import { escapeHtml, formatDate, deShout, snippetHtml } from './format.js?v=5';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -135,19 +135,23 @@ function renderRow(f, term) {
   const registrant = deShout(f.registrant || '(no registrant)');
   const client = deShout(f.client || '(no client)');
   const headline = `${escapeHtml(registrant)} <span class="lda-arrow" aria-hidden="true">→</span> <span class="lda-client">${escapeHtml(client)}</span>`;
+  // Title is the link out to the filing — drops the redundant "View
+  // filing" eyebrow that used to sit in the meta row.
+  const titleHtml = f.url
+    ? `<a href="${escapeHtml(f.url)}" target="_blank" rel="noopener">${headline}</a>`
+    : headline;
 
-  // Each filing has 1..N activities — issue + description. Render them
-  // as a small stack so the description (the journalistic gold) reads
-  // as the body of the row. Long descriptions get the same snippet
-  // treatment as CREC search hits — window centred on the matched term,
-  // or first ~360 chars when there's no term to centre on.
+  // Each filing has 1..N activities — issue + description. The issue
+  // label sits inline at the start of the description as a small pill,
+  // so we get the visual break without the empty rectangle that the
+  // standalone label row used to leave hanging.
   const activitiesHtml = (f.activities || []).map((a) => {
     const codeBit = a.code
-      ? `<span class="lda-code" title="${escapeHtml(a.label || a.code)}">${escapeHtml(a.code)}</span>`
+      ? `<span class="lda-code" title="${escapeHtml(a.code)}">${escapeHtml(a.label || a.code)}</span> `
       : '';
     const descBit = a.description
-      ? `<p class="lda-desc">${snippetHtml(a.description, term, 360)}</p>`
-      : '<p class="lda-desc muted">(no description provided)</p>';
+      ? `<p class="lda-desc">${codeBit}${snippetHtml(a.description, term, 360)}</p>`
+      : `<p class="lda-desc muted">${codeBit}<span>(no description provided)</span></p>`;
     const lobByists = (a.lobbyists || []).map((l) => deShout(l));
     const lobBit = lobByists.length
       ? `<p class="lda-meta-line">Lobbyists: ${lobByists.map((l) => highlight(l, term)).join(', ')}</p>`
@@ -156,16 +160,15 @@ function renderRow(f, term) {
     const tgtBit = targets.length
       ? `<p class="lda-meta-line">Targets: ${targets.slice(0, 6).map((t) => highlight(t, term)).join(', ')}${targets.length > 6 ? `, +${targets.length - 6} more` : ''}</p>`
       : '';
-    return `<div class="lda-activity">${codeBit}${descBit}${lobBit}${tgtBit}</div>`;
+    return `<div class="lda-activity">${descBit}${lobBit}${tgtBit}</div>`;
   }).join('');
 
   li.innerHTML = `
-    <h2 class="result-title">${headline}</h2>
+    <h2 class="result-title">${titleHtml}</h2>
     <div class="result-meta">
       <span class="badge src-bills">LD-2</span>
       <span class="result-date">${escapeHtml(f.period || '')} ${f.year || ''}</span>
       ${moneyHtml}
-      ${f.url ? `<a class="lda-link" href="${escapeHtml(f.url)}" target="_blank" rel="noopener">View filing</a>` : ''}
     </div>
     ${activitiesHtml}
   `;
