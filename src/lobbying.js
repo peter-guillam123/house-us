@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, deShoutName, snippetHtml } from './format.js?v=20';
+import { escapeHtml, formatDate, deShout, deShoutName, snippetHtml } from './format.js?v=21';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -443,7 +443,9 @@ function populateIssueCodeDropdown(filings) {
 $quarter.addEventListener('change', async () => {
   const [year, quarter] = $quarter.value.split('-').map(Number);
   await switchToShard(year, quarter);
-  if (state.term || state.code) runSearch();
+  // switchToShard now runs the search itself, so we always see a
+  // populated digest (with any active term/code filter applied to
+  // the new quarter).
 });
 
 $issueCode.addEventListener('change', () => {
@@ -520,7 +522,10 @@ async function switchToShard(year, quarter) {
     const harvestedDate = (data.harvested_at || '').slice(0, 10);
     const harvestedSuffix = harvestedDate ? ` · harvested ${formatDate(harvestedDate)}` : '';
     $stamp.textContent = `${data.count.toLocaleString()} filings · ${data.year} Q${data.quarter}${harvestedSuffix}`;
-    setStatus(`Ready. ${data.count.toLocaleString()} filings loaded — type a term to search.`);
+    // Auto-render the quarter-level digest: stat block + top-clients
+    // chart + leaderboards + recent filings. The user gets a "what was
+    // big in this quarter" view on landing rather than an empty page.
+    runSearch();
   } catch (err) {
     $stamp.textContent = '';
     setStatus(`Failed to load ${year} Q${quarter}: ${err.message}`, true);
