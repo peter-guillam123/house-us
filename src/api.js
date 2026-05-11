@@ -104,6 +104,26 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Latest CREC issue date — for the "last updated" stamp on Search.
+// Single pageSize-1 query, sorted DESC by dateIssued. Edge-cached by
+// the Worker for 5 minutes so repeat page loads are free.
+export async function latestCRECDate() {
+  const body = {
+    query: `collection:(CREC) publishdate:range(${EARLIEST},${todayIso()})`,
+    pageSize: '1',
+    offsetMark: '*',
+    sorts: [{ field: 'dateIssued', sortOrder: 'DESC' }],
+  };
+  const r = await fetch(viaProxy(`${GOVINFO}/search`), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) return null;
+  const data = await r.json();
+  return (data.results && data.results[0] && data.results[0].dateIssued) || null;
+}
+
 // Fetch the plain-text body of a GovInfo document (CREC granule, bill
 // package, FR notice, etc.). All collections wrap the body in
 // <html><body><pre>...</pre></body></html>, which makes extraction

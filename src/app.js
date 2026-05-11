@@ -7,8 +7,8 @@
 // readable hits in one view. Bars on the chart act as date-range
 // filter shortcuts: click a month, the result list scopes to it.
 
-import { searchGovInfo, fetchGranuleText } from './api.js?v=19';
-import { escapeHtml, renderResultRow, snippetHtml } from './format.js?v=19';
+import { searchGovInfo, fetchGranuleText, latestCRECDate } from './api.js?v=20';
+import { escapeHtml, formatDate, renderResultRow, snippetHtml } from './format.js?v=20';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('search-form');
@@ -505,3 +505,13 @@ if (state.term) {
 } else {
   setStatus('Type a term to search the Congressional Record.');
 }
+
+// "Last updated" — single query to GovInfo for the latest CREC issue
+// date. Worker edge-cache makes it free on repeat page loads. Silent
+// on failure; the stamp just stays blank.
+(async () => {
+  try {
+    const d = await latestCRECDate();
+    if (d) $stamp.textContent = `Latest Congressional Record: ${formatDate(d)}`;
+  } catch { /* leave stamp empty */ }
+})();

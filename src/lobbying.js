@@ -517,7 +517,9 @@ async function switchToShard(year, quarter) {
     const data = await loadShard(year, quarter);
     state.filings = data.filings || [];
     populateIssueCodeDropdown(state.filings);
-    $stamp.textContent = `${data.count.toLocaleString()} filings · ${data.year} Q${data.quarter}`;
+    const harvestedDate = (data.harvested_at || '').slice(0, 10);
+    const harvestedSuffix = harvestedDate ? ` · harvested ${formatDate(harvestedDate)}` : '';
+    $stamp.textContent = `${data.count.toLocaleString()} filings · ${data.year} Q${data.quarter}${harvestedSuffix}`;
     setStatus(`Ready. ${data.count.toLocaleString()} filings loaded — type a term to search.`);
   } catch (err) {
     $stamp.textContent = '';
