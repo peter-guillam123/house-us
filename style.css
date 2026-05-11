@@ -1072,6 +1072,7 @@ main {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  min-width: 0; /* let the cell shrink past its content; wrap-friendly */
 }
 .lda-stat:last-child {
   border-right: none;
@@ -1083,6 +1084,10 @@ main {
   letter-spacing: -0.018em;
   color: var(--ink);
   line-height: 1.05;
+  /* Long top-issue labels like "Budget/Appropriations" wrap to two
+     lines at natural break points rather than overflowing the cell. */
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 .lda-stat-label {
   font-family: var(--mono);
