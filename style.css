@@ -1090,14 +1090,19 @@ main {
   hyphens: auto;
 }
 /* Text-valued cell (top issue) uses a smaller serif size so longer
-   phrases like "Labor Issues/Antitrust/Workplace" fit without blowing
-   the cell to three lines. Still serif, still display-y; just sized
-   for words rather than two- or three-character numbers. */
+   phrases fit cleanly. Still serif, still display-y; just sized for
+   words rather than two- or three-character numbers. */
 .lda-stat-num--text {
   font-size: clamp(1rem, 1.4vw, 1.2rem);
   font-variation-settings: 'opsz' 18, 'wght' 500;
   line-height: 1.2;
   letter-spacing: -0.012em;
+}
+/* Each "/"-separated segment of a multi-part issue label gets its
+   own line, so "Labor Issues/Antitrust/Workplace" stacks as three
+   lines rather than wrapping mid-word. */
+.lda-issue-seg {
+  display: block;
 }
 .lda-stat-label {
   font-family: var(--mono);

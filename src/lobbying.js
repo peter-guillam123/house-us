@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, deShoutName, snippetHtml } from './format.js?v=22';
+import { escapeHtml, formatDate, deShout, deShoutName, snippetHtml } from './format.js?v=23';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -194,12 +194,23 @@ function renderAggregate(agg) {
     { num: agg.lobbyists.toLocaleString(), label: agg.lobbyists === 1 ? 'lobbyist' : 'lobbyists' },
   ];
   if (agg.topIssue) {
-    cells.push({ num: escapeHtml(agg.topIssue.label), label: 'top issue', textValued: true });
+    cells.push({ num: formatIssueLabel(agg.topIssue.label), label: 'top issue', textValued: true });
   }
   return cells.map((c) => {
     const numCls = c.textValued ? 'lda-stat-num lda-stat-num--text' : 'lda-stat-num';
     return `<div class="lda-stat"><span class="${numCls}">${c.num}</span><span class="lda-stat-label">${c.label}</span></div>`;
   }).join('');
+}
+
+// LDA issue labels are hierarchical with slashes as separators —
+// "Labor Issues/Antitrust/Workplace" is three sub-categories, not
+// one phrase. Render each segment on its own line so the cell reads
+// as a small stacked list rather than a wrapped-mid-word mess.
+function formatIssueLabel(label) {
+  if (!label) return '';
+  const segments = label.split('/').map((s) => s.trim()).filter(Boolean);
+  if (segments.length <= 1) return escapeHtml(label);
+  return segments.map((s) => `<span class="lda-issue-seg">${escapeHtml(s)}</span>`).join('');
 }
 
 function formatMoneyShort(n) {
