@@ -8,7 +8,7 @@
 // code — fit a "load shard, regex it" model perfectly. Same plumbing
 // shape as House AU's Hansard search.
 
-import { escapeHtml, formatDate, deShout, deShoutName, snippetHtml } from './format.js?v=21';
+import { escapeHtml, formatDate, deShout, deShoutName, snippetHtml } from './format.js?v=22';
 
 const $ = (id) => document.getElementById(id);
 const $form = $('lobbying-form');
@@ -194,11 +194,12 @@ function renderAggregate(agg) {
     { num: agg.lobbyists.toLocaleString(), label: agg.lobbyists === 1 ? 'lobbyist' : 'lobbyists' },
   ];
   if (agg.topIssue) {
-    cells.push({ num: escapeHtml(agg.topIssue.label), label: 'top issue' });
+    cells.push({ num: escapeHtml(agg.topIssue.label), label: 'top issue', textValued: true });
   }
-  return cells.map((c) =>
-    `<div class="lda-stat"><span class="lda-stat-num">${c.num}</span><span class="lda-stat-label">${c.label}</span></div>`
-  ).join('');
+  return cells.map((c) => {
+    const numCls = c.textValued ? 'lda-stat-num lda-stat-num--text' : 'lda-stat-num';
+    return `<div class="lda-stat"><span class="${numCls}">${c.num}</span><span class="lda-stat-label">${c.label}</span></div>`;
+  }).join('');
 }
 
 function formatMoneyShort(n) {
